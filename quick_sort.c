@@ -1,7 +1,7 @@
 #include<stdio.h>
 
-static int _Patition(int *num, int start, int end)
-{
+static int
+_Patition(int *num, int start, int end) {
     int i, j, tmp;
 
 	i = start - 1;
@@ -21,8 +21,8 @@ static int _Patition(int *num, int start, int end)
     return i + 1;
 }
 
-void QuickSort(int *num, int start, int end)
-{
+void
+QuickSort(int *num, int start, int end) {
     if (start < end) {
         start = _Patition(num, start, end);
 		QuickSort(num, 0, start - 1);
@@ -30,6 +30,7 @@ void QuickSort(int *num, int start, int end)
     }
 }
 
+#if 0
 int main()
 {
     int num[] = {11, 24, 576, 42, 875, 45, 834, 21};
@@ -46,3 +47,4 @@ int main()
 
     return 0;
 }
+#endif
