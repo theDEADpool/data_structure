@@ -1,0 +1,45 @@
+/*选择排序
+基本思想：
+在长度为N的无序数组中，第一次遍历n-1个数，找到最小的数值与第一个元素交换；
+第二次遍历n-2个数，找到最小的数值与第二个元素交换；
+。。。
+第n-1次遍历，找到最小的数值与第n-1个元素交换，排序完成。
+平均时间复杂度：O(n2)
+*/
+#include<stdio.h>
+void SelectionSort(int arr[], int len)
+{
+	if(arr == NULL)
+		return;
+	int i,j,tmp;
+	for(i=0; i<len-1;i++)
+	{
+		int minIndex = i;
+		for(j=i+1; j<len; j++)
+		{
+			if(arr[j]<arr[minIndex])
+			{
+				minIndex = j;
+			}
+		}
+		if(minIndex != i)
+		{
+			tmp=arr[i];
+			arr[i]=arr[minIndex];
+			arr[minIndex]=tmp;
+		}
+	}
+}
+
+int main()
+{
+	int arr[]={42,20,17,13,28,14,23,15};
+	int len = sizeof(arr)/sizeof(int);
+	int i;
+	SelectionSort(arr,len);
+	for(i=0; i<len; i++)
+    {
+        printf("arr[%d]=%d\n",i, arr[i]);
+    }
+	return 0;
+}
