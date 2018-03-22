@@ -89,5 +89,16 @@ Nagle算法和CORK算法着眼点不一样，Nagle算法主要避免网络因为
 延迟ACK很好理解，就是接收端收到数据之后不会马上回复ACK，而是等待一段时间，通过ACK报文确认尽可能多的数据。但是需要注意的是延迟ACK和NAGLE算法是有冲突的。两者同时使用可能会使TCP连接进入一种僵持状态。
 发送端不发数据，接收端也不确认，最终导致数据传输的大量延迟。
 
+TCP和UDP的区别
+协议层面：
+1、TCP有连接，UDP无连接。
+2、TCP可靠，UDP不可靠。
+3、TCP流传输，数据有序。UDP包传输，数据无序。
+4、TCP有拥塞控制，UDP没有。
 
+代码层面：
+1、TCP和UDP的socket参数不同。
+2、TCP服务端有accept，客户端有connect，UDP没有。
+3、TCP发送接收用的send、recv。UDP发送接收用的sendto、recvfrom。
+4、TCP占用系统资源多于UDP。
 
