@@ -24,9 +24,17 @@ cli_addr：客户端的地址。
 servaddr：需要连接的服务器ip和port。
 函数成功返回0，错误返回-1。
 
-6、send
+6、ssize_t send(int fd, const void *buf, size_t nbytes, int flags);
+flags的取值：
+MSG_DONTROUTE：作用于send和sendto，本次发送绕过路由表查找。也可以对整个socket设置SO_DONTROUTE选项，绕过路由表查找。
+MSG_DONTWAIT：仅本操作非阻塞。
+MSG_OOB：发送或接收带外数据。TCP连接上只有一个字节可以作为带外数据发送。对于recv，本标志指明即将读入的是带外数据。
+MSG_PEEK：窥看外来消息。作用于recv和recvfrom，允许我们查看已读取的数据，而且系统不再recv或recvfrom返回后丢弃这些数据。
+MSG_WAITALL：等待所有数据。作用于recv和recvfrom，告诉内核不要在尚未读入请求数目的字节之前，让一个读操作返回。
+函数成功则为发送的字节数，出错返回-1。
 
-7、recv
+7、ssize_t recv(int fd, void *buf, size_t nbytes, int flags);
+函数成功则为接收的字节数，出错返回-1。
 
 8、ssize_t sendto(int fd, const void *buf, size_t len, int flags, const struct sockaddr *to , socklen_t tolen);
 用于发送UDP报文。
@@ -38,3 +46,8 @@ to：用来指定目的ip和port。
 成功则返回实际接收的字符数，失败返回－1，错误原因存于errno中。
 
 注意：sendto和recvfrom也可以用来发送和接收TCP报文。
+
+10、ssize_t recvmsg(int fd, struct msghdr *msg, int flags);
+sszie_t sendmsg(int fd, struct msghdr *msg, int flags);
+函数成功则为发送或接收的字节数，若出错为-1。
+这两个接口是对其他发送和接收接口的整体封装。
