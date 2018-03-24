@@ -13,7 +13,7 @@ address_len：address结构体的大小。
 
 3、int listen(int fd, int backlog);
 backlog：由于TCP连接是需要三次握手的，那么在服务器上有可能存在还在握手过程中的连接，或者是刚刚握手完成但应用程序还没有来得及处理的连接。
-这两种类型的连接内核会有一个队列来进行保存。backlog参数则是指定了这个队列的长度。
+这两种类型的连接内核会分别用两个队列来进行保存。backlog参数则是指定了这两个队列的长度之和。
 函数成功返回0，错误返回-1。
 
 4、int accept(int fd, struct socketaddr* cli_addr, socklen_t* len);
