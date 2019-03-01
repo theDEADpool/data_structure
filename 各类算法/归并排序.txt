@@ -1,0 +1,122 @@
+算法复杂度 nlog(n)
+稳定排序算法
+
+归并排序的思路是将待排序的数列分成若干个长度为1的子序列，然后将这些子序列两两合并。得到若干个长度为2的子序列，再次两两合并。依次递归，最终完成排序。
+归并排序适合链表排序。
+
+4,3,5,9,1
+4,3 | 5,9,1
+4|3 | 5|9,1
+4|3 | 5|9|1
+----------------- 开始合并
+3,4 | 5|1,9
+3,4 | 1,5,9
+1,3,4,5,9
+
+链表归并排序实现（GO语言）
+type ListNode struct {
+	Val int
+	Next *ListNode
+}
+
+func MergeList(l1 *ListNode, l2 *ListNode) *ListNode {
+	cur := &ListNode{-1, nil}
+	head := cur
+	
+	for l1 != nil && l2 != nil {
+		if l1.Val < l2.Val {
+			cur.Next = l1
+			l1 = l1.Next
+		} else {
+			cur.Next = l2
+			l2 = l2.Next
+		}
+		cur = cur.Next
+	}
+	
+	if nil != l1 {
+		cur.Next = l1
+	}
+	if nil != l2 {
+		cur.Next = l2
+	}
+	
+	return head.Next
+}
+
+func SortList(head *ListNode) *ListNode {
+	if nil == head || nil == head.Next {
+		return head
+	}
+	
+	slow,fast,mid_tail := head, head, head
+	for fast != nil && fast.Next != nil {
+		mid_tail = slow
+		slow = slow.Next
+		fast = fast.Next.Next
+	}
+	mid_tail.Next = tail
+
+	return MergeList(SortList(head), SortList(slow))
+}
+
+数组归并排序实现（GO语言）
+func MergeArray (a1 []int, a2 []int) (ret []int) {
+	len1, len2 := 0, 0
+	for len1 < len(a1) && len2 < len(a2) {
+		if a1[len1] < a2[len2] {
+			ret = append(ret, a1[len1])
+			len1++
+		} else {
+			ret = append(ret, a2[len2])
+			len2++
+		}
+	}
+	
+	ret = append(ret, a1[len1:]...)
+	ret = append(ret, a2[len2:]...)
+	
+	return
+}
+
+func SortArray(array []int) []int {
+	length := len(array)
+
+	if 0 == length || 1 == length {
+		return array
+	}
+
+	length /= 2
+	return MergeArray(SortArray(array[:length]), SortArray(array[length:]))
+}
+
+C语言实现数组归并排序，需要额外创建一个临时数组，在排序过程中使用
+void Merge(int sourceArr[],int tempArr[], int startIndex, int midIndex, int endIndex)
+{
+    int i = startIndex, j = midIndex+1, k = startIndex;
+    while(i!=midIndex+1 && j!=endIndex+1)
+    {
+        if(sourceArr[i] > sourceArr[j])
+            tempArr[k++] = sourceArr[j++];
+        else
+            tempArr[k++] = sourceArr[i++];
+    }
+    while(i != midIndex+1)
+        tempArr[k++] = sourceArr[i++];
+    while(j != endIndex+1)
+        tempArr[k++] = sourceArr[j++];
+    for(i=startIndex; i<=endIndex; i++)
+        sourceArr[i] = tempArr[i];
+}
+
+void MergeSort(int sourceArr[], int tempArr[], int startIndex, int endIndex)
+{
+    int midIndex;
+    if(startIndex < endIndex)
+    {
+        midIndex = startIndex + (endIndex-startIndex) / 2;
+        MergeSort(sourceArr, tempArr, startIndex, midIndex);
+        MergeSort(sourceArr, tempArr, midIndex+1, endIndex);
+        Merge(sourceArr, tempArr, startIndex, midIndex, endIndex);
+    }
+}
