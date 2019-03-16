@@ -36,3 +36,10 @@ tcpdump
 
 tcpdump src host [ip/hostname] dst host [ip/hostname] tcp/udp port [xxx]
 
+CPU跑满排查-->一般情况下就是死循环
+top命令可以找到CPU跑满的进程。
+ps命令可以找到某个进程和其线程的CPU使用情况
+pstack命令则可以看到某个线程的调用栈信息
+
+内存检测工具
+addressSanitizer
