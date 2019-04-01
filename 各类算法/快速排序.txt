@@ -1,4 +1,8 @@
-#include<stdio.h>
+算法复杂度 O(nlogn)
+不稳定排序算法
+
+排序算法的思路就是先选择数组中的一个成员，将数组中所有比这个成员小的值都放在该成员的左边，所有比成员大的值都放在成员右边。
+然后以该成员为中心，将数组分成两个部分，重复上面的过程。直到数组无法再被分隔为止。
 
 static int
 _Patition(int *num, int start, int end) {
@@ -29,22 +33,3 @@ QuickSort(int *num, int start, int end) {
 		QuickSort(num, start + 1, end);
     }
 }
-
-#if 0
-int main()
-{
-    int num[] = {11, 24, 576, 42, 875, 45, 834, 21};
-    int len = sizeof(num) / sizeof(int);
-    
-    QuickSort(num, 0, len - 1);
-    
-    int i;
-    for (i = 0; i < len; i++) {
-        printf("%d ", num[i]);
-    }
-    
-    printf("\n");
-
-    return 0;
-}
-#endif
