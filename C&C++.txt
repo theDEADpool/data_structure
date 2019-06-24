@@ -172,3 +172,28 @@ list的迭代器不支持>、>=、<、<=的操作，也不支持加减法操作�
 1、创建一个派生类的对象时，基类的构造函数会先于派生类的构造函数执行。如果基类的构造函数有调用虚函数，只会执行基类实现的虚函数，不会执行派生类对于虚函数的实现。
 2、基类的引用或指针可以指向一个派生类的对象。
 3、自定义派生类的构造函数时，除了要初始化派生类的成员变量，还需要调用基类的构造函数，初始化基类的成员变量。
+
+22、智能指针
+1)auto_ptr，在C++11中已被弃用，有以下特点：
+1>auto_ptr赋值给另外一个auto_ptr之后，对象的所有权会发生转移。如auto_ptr p2 = p1;此时p2指向p1所指向的对象，而p1则会指向空的对象。
+2>auto_ptr不能作为函数的返回值和函数参数，也不能在容器中保存auto_ptr。
+
+C++11之后智能指针分为shared_ptr、unique_ptr、weak_ptr。
+uique_ptr独占指针对象，指针对象的生命周期与其一致。
+shared_ptr可共享指针对象，指针所指向的对象在所有关联其指针生命周期结束时结束。
+weak_ptr作为shared_ptr的辅助指针，不能决定其所指对象的生命周期。需要lock成shared_ptr才能引用其所指对象。
+智能指针的构造函数都有explicit关键字修饰，不支持隐式转换如shared_ptr<int> sp = new int(100);这种写法会报错。要写成shared_ptr<int> sp(new int(100));
+或者写成shared_ptr<int> sp = make_shared<int>(100);需要注意的是不能对指针使用make_shared，而=赋值则一定要使用指针。这段描述对于unique_ptr也适用。
+1)shared_ptr有引用计数。用shared_ptr初始化另一个shared_ptr、作为函数入参、作为函数返回值，其引用计数就会递增。shared_ptr赋予一个新值、share_ptr离开作用于则引用计数会递减。当引用计数为0，则会释放其管理的对象。
+shared_ptr<int> sp = p; //会让p的引用计数+1
+sp = q; //q的引用计数+1，sp之前指向的对象引用计数-1，如果减为0则自动释放。
+sp.reset(new int(1024)); //sp重新指向一个新的对象，原对象的引用计数-1。
+2)unique_ptr是独享所有权的指针，无法进行复制构造，无法进行复制赋值操作。即无法使两个unique_ptr指向同一个对象。但是可以进行移动构造和移动赋值操作。保存指向某个对象的指针，当它本身被释放，指向的对象也会被释放。
+unique_ptr<int> up1(new int(100));
+unique_ptr<int> up2(new int(50));
+up2 = move(up1); //不能直接up2 = up1
+up2.reset() //释放up2所指向的对象，并将up2设为null。
+3)weak_ptr是为了防止shared_ptr相互引用时，引用计数永远不会下降为0，而导致资源无法释放。weak_ptr不会增加对象的引用计数。
+创建weak_ptr需要shared_ptr来初始化。weak_ptr<int> wp(sp);
+不能直接访问weak_ptr所指向的对象，需要通过lock()，如果wp所指向的对象存在，lock(wp)会返回一个shared_ptr，如果wp所指向的对象已经被释放，那么lock(wp_会返回一个空的shared_ptr。
+wp.expire()返回true或false来表示对象是否已经释放。
