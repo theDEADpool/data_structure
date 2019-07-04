@@ -255,3 +255,14 @@ constexpr int *p，p本身是一个常量不能改变。p所指向的内存必�
 非类型形参只能是整数、指针、引用，不能是double、string之类的类型。
 3)类模板中可以声明static成员。需要注意的是，相同类型的类模板实例共用相同的static成员，不同类型的类模板实例使用不同的static成员。
 4)类模板形参不能采用实参推演的方式。类模板实例化的时候必须明确指定实参的类型，比如A<int> a，不能写成A<2> a;
+
+29、typename关键字
+typename有个很关键的作用就是告诉编译器依赖于模板类型的名称是一个类型，比如typename T::iterator *iter;
+为什么需要这个设定？因为iterator是依赖于模板参数T的，具体iterator是什么需要等待模板实例化之后才能确定。那么对于下面两种不同的实例化，对于上面的声明会有不同的解释。
+struct ContainsA {
+    struct iterator {...};
+};	这种情况 *iter就是一个ContainsA中iterator类型的指针。
+struct ContainsB {
+    static int iterator;
+};  这种情况上面的声明会被解释为一个乘法表达式，相当于ContainsB中的iterator变量 * iter，这时候编译就会报错，iter未定义。
+通过typename关键字，就是为了告诉编译器T::iterator是一个类型，那么对于ContainsB这种情况的报错就会是在ContainsB中没有iterator这种类型。

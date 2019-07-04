@@ -17,7 +17,16 @@ _S_free_list是一个空闲内存链表的数组。数组成员个数为16，下
 6>如果malloc返回失败，那么会检查空闲链表中是否存在空闲内存，如果有的话会回收到资源池，然后再次从内存池分配。
 7>如果回收之后还是malloc失败，那么就只能利用一级配置器的out_of_memory机制进行处理。
 
-1、vector
+2、iterator
+STL迭代器可以分为五类：
+1)输入迭代器input_iterator：只读，且只能一次读操作，支持操作：++p,p++,!=,==,=*p,p->；
+2)输出迭代器output_iterator：只写，且只能一次写操作，支持操作：++p,p++；
+3)正向迭代器forward_iterator：可多次读写，支持输入输出迭代器的所有操作；
+4)双向迭代器bidirectional_iterator：支持正向迭代器的所有操作，且支持操作：--p,--p；
+5)随机访问迭代器random_access_iterator：除了支持双向迭代器操作外，还支持：p[n],p+n,n+p,p-n,p+=n,p-=n,p1-p2,p1<p2,p1>p2,p1>=p2,p1<=p2；
+
+3、vector
+vector使用的是随机访问迭代器。
 1)vector定义的时候如果没有指定大小，则大小为0。
 2)push_back操作如果vector已满的情况下，vector会扩大为当前大小的两倍。如果vector大小是0，那么第一次push_back之后vector的大小是1。
 
