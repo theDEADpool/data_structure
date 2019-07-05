@@ -230,7 +230,7 @@ wp.expire()返回true或false来表示对象是否已经释放。
 5>在多重继承的情况下，多个基类如果都有虚函数的话，派生类会有多个虚函数表指针指向不同的虚函数表，不同的虚函数表分别存储了不同基类的虚函数。
 
 24、explicit关键字
-修饰构造函数，可以防止隐式转换和复制初始化。
+修饰构造函数，可以防止隐式转换和拷贝初始化。
 修饰转换函数，可以防止隐式转换。
 
 25、如何定义一个只能在堆上创建的类？
@@ -239,10 +239,14 @@ wp.expire()返回true或false来表示对象是否已经释放。
 重载new和delete操作符同时将其设置为private类型。
 
 26、类型转换运算符
-static_cast
-dynamic_cast
+static_cast:static_cast<type> (expression)，将express转换为type类型，在编译期间进行转换。但不保证转换安全。比如void *ptr = &d; double *dp = static_cast<double *> (ptr);这样可以将一个void *指针转换成一个double *类型的，
+但是编译器不会检查d是不是一个double类型的变量，这个要人为保证正确性。
+dynamic_cast:type必须是一个类类型，通常情况下要含有虚函数。dynamic_cast在运行期间进行类型转换。
+dynamic_cast<type *> (e)
+dynamic_cast<type &> (e)
+dynamic_cast<type &&> (e)
 const_cast:用于删除const、volatile和__unaligned特性。比如将const int转换为int。
-reinterpret_cast:
+reinterpret_cast:reinterpret_cast<type> (expression)，只是对对象的类型进行重新解释，不会借助转换对对象数据进行调整，也不会判断对象转换前后的类型本身是否可以合法的进行转换。非安全。
 
 27、constexpr函数指可以赋值给常量表达式的函数。要求函数返回的值必须是字面值且只有1个return语句。
 constexpr函数被隐式的指定成内联函数。
@@ -266,3 +270,5 @@ struct ContainsB {
     static int iterator;
 };  这种情况上面的声明会被解释为一个乘法表达式，相当于ContainsB中的iterator变量 * iter，这时候编译就会报错，iter未定义。
 通过typename关键字，就是为了告诉编译器T::iterator是一个类型，那么对于ContainsB这种情况的报错就会是在ContainsB中没有iterator这种类型。
+
+30、仿函数
