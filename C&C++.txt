@@ -32,10 +32,11 @@ const成员函数可以访问对象的成员变量，不论成员变量是否被
 非const成员函数可以访问非const对象的非const成员变量和const成员变量，但是不能访问const对象的任意成员变量。
 如果成员函数不对成员变量进行修改操作，应该尽量声明为const成员函数。
 类中的const成员变量几种赋值方式：
-1、在声明类的时候赋值，只在c++11后支持。
-2、在类构造函数后面的初始化参数列表中赋值，如类A中a1是const int成员变量，A::A():a1(123){...}。需要注意的是初始化参数列表只能写在构造函数定义的地方，不能写在构造函数声明的地方。
-3、给const成员加上static关键字，这样可以直接在类外部赋值，如const int A::a1 = 123。
+1)在声明类的时候赋值，只在c++11后支持。
+2)在类构造函数后面的初始化参数列表中赋值，如类A中a1是const int成员变量，A::A():a1(123){...}。需要注意的是初始化参数列表只能写在构造函数定义的地方，不能写在构造函数声明的地方。
+3)给const成员加上static关键字，这样可以直接在类外部赋值，如const int A::a1 = 123。
 假设类A有一个成员函数void funcA();,该成员函数重载了void funcA() const;，那么对于A a; a.funcA();会调用非const类型的成员函数，而const A a; a.funcA();则会调用const类型的成员函数。
+4)如果const修饰成员函数体，表示该成员函数不会修改成员变量的值。
 
 5、sizeof关键字
 编译阶段处理，对于数组为数组大小，对于指针4字节(32位系统)
@@ -184,6 +185,8 @@ list的迭代器不支持>、>=、<、<=的操作，也不支持加减法操作�
 1)auto_ptr，在C++11中已被弃用，有以下特点：
 1>auto_ptr赋值给另外一个auto_ptr之后，对象的所有权会发生转移。如auto_ptr p2 = p1;此时p2指向p1所指向的对象，而p1则会指向空的对象。
 2>auto_ptr不能作为函数的返回值和函数参数，也不能在容器中保存auto_ptr。
+为什么auto_ptr不能作为vector成员类型？
+STL的容器要对能够对对象进行安全的赋值操作，拷贝之后原对象不会改变。而auto_ptr拷贝之后原指针会被设定指向NULL。比如vector < auto_ptr <int> > vp; auto_ptr <int> vp1 = vp[0]; 如果这段代码是可以编译运行的，那么vp[0]在赋值之后会变成NULL。这显然是不能被允许的。
 
 C++11之后智能指针分为shared_ptr、unique_ptr、weak_ptr。
 uique_ptr独占指针对象，指针对象的生命周期与其一致。
@@ -272,3 +275,17 @@ struct ContainsB {
 通过typename关键字，就是为了告诉编译器T::iterator是一个类型，那么对于ContainsB这种情况的报错就会是在ContainsB中没有iterator这种类型。
 
 30、仿函数
+
+31、new与malloc的区别
+1)malloc从堆分配内存，new从自由存储区分配内存。new分配的内存不一定是堆内存，也可以是静态存储区。placement new甚至不会分配内存。
+2)new返回的指针是具体的对象指针，而malloc返回的指针是void类型的，需要使用者自己保证安全性。
+3)malloc分配内存失败返回的是NULL，new分配内存失败是抛异常bad_alloc。
+4)malloc分配内存需要自行计算分配内存的大小，new是由编译器自动计算的。
+5)new、delete会调用对象的构造或者析构函数，malloc和free不会。
+6)new[]和delete[]专门用于分配和释放数组类型。malloc不会没有这个设定。
+7)new和delete是运算符可以被重载，malloc和free是标准库函数不可以重载。
+
+32、new operator、operator new和placement new
+1)new operator是指new操作符，包括分配内存和构造对象两个函数。
+2)operator new是new的重载，是一个函数而不是运算符。分为全局重载void* ::operator new(size_t size)和类重载void* A::operator new(size_t size)。operator new是new操作符的第一步。如果被重载了，则调用重载之后的operator new()。
+3)placement new是在一个已经存在的内存上调用对象的构造函数，
