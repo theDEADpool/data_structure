@@ -272,7 +272,7 @@ struct ContainsB {
 
 30、仿函数
 
-31、new、delete、new[]、delete[]、malloc、free
+31、new、delete、delete[]、malloc、free
 1)malloc从堆分配内存，new从自由存储区分配内存。new分配的内存不一定是堆内存，也可以是静态存储区。placement new甚至不会分配内存。
 2)new返回的指针是具体的对象指针，而malloc返回的指针是void类型的，需要使用者自己保证安全性。
 3)malloc分配内存失败返回的是NULL，new分配内存失败是抛异常bad_alloc。
