@@ -205,6 +205,7 @@ up2.reset() //释放up2所指向的对象，并将up2设为null。
 wp.expire()返回true或false来表示对象是否已经释放。
 
 23、多态的实现
+多态是指不同的对象接收相同的消息产生不同的结果。
 重载多态(编译期)：函数重载、运算符重载
 子类型多态(运行期)：虚函数
 参数型多态(编译期)：类模板、函数模板
@@ -219,6 +220,7 @@ wp.expire()返回true或false来表示对象是否已经释放。
 3>inline可以用来修饰虚函数，但当虚函数表现出多态性时不能内联。就是不能通过指针或者引用的方式调用虚函数。
 4>虚析构函数是为了解决基类的指针指向了派生类的对象，并用基类的指针删除派生类的对象。
 5>纯虚函数是指基类不给出具体的函数实现，而是由派生类实现。
+6>基类的函数被声明为虚函数，派生类不论加不加virtual修饰符，都是虚函数。
 
 3)虚函数表
 1>虚函数表是在编译阶段产生的。虚函数指针是在运行阶段，构造函数时候创建的。
@@ -272,17 +274,24 @@ struct ContainsB {
 
 30、仿函数
 
-31、new、delete、delete[]、malloc、free
+31、new、new[]、delete、delete[]、malloc、free
 1)malloc从堆分配内存，new从自由存储区分配内存。new分配的内存不一定是堆内存，也可以是静态存储区。placement new甚至不会分配内存。
 2)new返回的指针是具体的对象指针，而malloc返回的指针是void类型的，需要使用者自己保证安全性。
 3)malloc分配内存失败返回的是NULL，new分配内存失败是抛异常bad_alloc。
 4)malloc分配内存需要自行计算分配内存的大小，new是由编译器自动计算的。
 5)new、delete会调用对象的构造或者析构函数，malloc和free不会。
-6)new[]和delete[]专门用于分配和释放数组类型。malloc不会没有这个设定。
+6)new[]和delete[]专门用于分配和释放数组类型。malloc不会没有这个设定。delete[]会为数组中每个成员调用析构函数，而delete只会调用一次析构函数。
 7)new和delete是运算符可以被重载，malloc和free是标准库函数不可以重载。
 8)对于自定义类型，new[]会在首地址前4个字节定义数组长度，调用delete[]时候会根据长度来析构整个数组。对于内置类型不需要记录数组长度。
 
 32、new operator、operator new和placement new
 1)new operator是指new操作符，包括分配内存和构造对象两个函数。
-2)operator new是new的重载，是一个函数而不是运算符。分为全局重载void* ::operator new(size_t size)和类重载void* A::operator new(size_t size)。operator new是new操作符的第一步。如果被重载了，则调用重载之后的operator new()。
-3)placement new是在一个已经存在的内存上调用对象的构造函数，
+2)operator new是一个函数而不是运算符。可以被重载，分为全局重载void* ::operator new(size_t size)和类重载void* A::operator new(size_t size)。operator new是new操作符的第一步。如果被重载了，则调用重载之后的operator new()。
+在无法申请指定大小的内存时，如果设置了new_handler会调用new_handler。如果没有设置则抛出bad_alloc异常。
+3)placement new是在一个已经存在的内存上调用对象的构造函数。对象使用完毕时需要人为调用对象的析构函数。
+
+33、构造函数和析构函数的调用顺序
+构造函数；基类构造函数->成员类构造函数->当前类构造函数。
+析构函数：当前类析构函数->成员类析构函数->基类析构函数。
+虚基类在其他任意类之前调用构造函数，在其他任意类之后调用析构函数。
+成员的初始化顺序是根据成员在类中定义的顺序决定的，而不是根据初始化列表决定。
