@@ -213,7 +213,7 @@ up1.release() //release()本身只是转移控制权，没有释放内存，因�
 
 3)weak_ptr是为了防止shared_ptr相互引用时，引用计数永远不会下降为0，而导致资源无法释放。weak_ptr不会增加对象的引用计数。
 创建weak_ptr需要shared_ptr来初始化。weak_ptr<int> wp(sp);
-不能直接访问weak_ptr所指向的对象，需要通过lock()，如果wp所指向的对象存在，lock(wp)会返回一个shared_ptr，如果wp所指向的对象已经被释放，那么lock(wp_会返回一个空的shared_ptr。
+不能直接访问weak_ptr所指向的对象，需要通过lock()，如果wp所指向的对象存在，lock(wp)会返回一个shared_ptr，如果wp所指向的对象已经被释放，那么lock(wp)会返回一个空的shared_ptr。
 wp.expire()返回true或false来表示对象是否已经释放。
 
 智能指针的注意事项：
