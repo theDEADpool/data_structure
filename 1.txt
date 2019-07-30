@@ -1,44 +1,113 @@
-编写my_strcpy函数，实现与库函数strcpy类似的功能，不能使用任何库函数
-char *my_strcpy(char *strDest, const char *strSrc)
+char* Mystrcpy(char* pDest, const char* pSrc)
 {
-    if(strDest == NULL || strSrc == NULL)
-    {
-        return NULL;
-    }
+    assert(pSrc);
+    assert(pDest);
 
-    char *tempptr = strDest;
-    while((*strDest++=*strSrc++) != '\0');
-    return tempptr;
+    char *ret = pDest;
+    while(*pSrc != '\0') {
+        *pDest = *pSrc;
+        pSrc++;
+        pDest++;
+    }
+    *pDest = '\0';
+    
+    return ret;
 }
 
-编写my_strcat
-char *my_strcat(char *dest, const char *src)
-{
-    char *p = dest;
-    while(*p) p++; //让指针p只想dest的最后
-    while(*src)
-    {
-        *p=*src;
-        p++;
-        src++;
+char* Mystrcat(char* pDest, const char* pSrc) {
+    assert(pSrc);
+    assert(pDest);
+
+    char *ret = pDest;
+    pDest += strlen(pDest);
+    while (*pSrc != '\0') {
+        *pDest = *pSrc;
+        pDest++;
+        pSrc++;
     }
-    *p='\0';
-    return dest;
+    *pDest = '\0';
+
+    return ret;
 }
 
-编写my_strcmp
-int my_strcmp(const char *str1, const char *str2)
-{
-    while(str1!=NULL && str2!=NULL)
-    {
-        while(*str1++==*str2++)
-        {
-            if(*str1=='\0'&&*str2=='\0')
-		return 0;
+int Mystrcmp(const char* pLeft, const char* pRight) {
+    assert(pLeft);
+    assert(pRight);
+    
+    while (*pLeft != '\0' && *pRight != '\0') {
+        if (*pLeft > *pRight) {
+            return 1;
+        } else if (*pLeft < *pRight) {
+            return -1;
         }
-        return 1;
+        *pLeft++;
+        *pRight++;
     }
-    return -1;
+    
+    if (*pLeft > *pRight) {
+        return 1;
+    } else if (*pLeft < *pRight) {
+        return -1;
+    }
+
+    return 0;
 }
 
-排序算法，看git上已有的总结
+const char* Mystrstr(const char* pLeft, const char* pRight) {
+    assert(pLeft);
+    assert(pRight);
+    if (*pRight == '\0') { return NULL; }
+
+    while (*pLeft != '\0') {
+        const char* start1 = pLeft;
+        const char* start2 = pRight;
+        while (*start1 != '\0' && *start2 != '\0' && *start1 == *start2) {
+            start1++;
+            start2++;
+        }
+        
+        if (*start2 == '\0') { return pRight; }
+        pLeft++;
+    }
+    
+    return NULL;
+}
+
+void* Mymemcpy(void* pDest, void *pSrc, unsigned n) {
+    assert(pSrc);
+    assert(pDest);
+    void *ret = pDest;
+
+    while(n > 0) {
+        *(char*)pDest = *(char*)pSrc;
+        pDest = (char*)pDest + 1;
+        pSrc = (char*)pSrc + 1;
+        n--;
+    }
+
+    return ret;
+}
+
+void* Mymemmove(void* pDest, const void* pSrc, int n) {
+    assert(pDest);
+    assert(pSrc);
+    
+    void* ret = pDest;
+    char* dest = (char*)pDest;
+    char* src = (char*)pSrc;
+    if (src > dest) {
+        while (n > 0) {
+            *dest = *src;
+            dest++;
+            src++;
+            n--;
+        }
+    } else {
+        while (n >= 0) {
+            *(dest + n) = *(src + n);
+            n--;
+        }
+    }
+    
+    return ret;
+}
