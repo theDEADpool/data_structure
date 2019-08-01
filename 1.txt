@@ -19,7 +19,9 @@ char* Mystrcat(char* pDest, const char* pSrc) {
     assert(pDest);
 
     char *ret = pDest;
-    pDest += strlen(pDest);
+    while (*pDest != '\0') {
+		pDest++;
+	}
     while (*pSrc != '\0') {
         *pDest = *pSrc;
         pDest++;
@@ -103,10 +105,14 @@ void* Mymemmove(void* pDest, const void* pSrc, int n) {
             n--;
         }
     } else {
-        while (n >= 0) {
-            *(dest + n) = *(src + n);
-            n--;
-        }
+        dest += n - 1;
+		src += n - 1;
+		while (n > 0) {
+			*dest = *src;
+			dest--;
+			src--;
+			n--;
+		}
     }
     
     return ret;
