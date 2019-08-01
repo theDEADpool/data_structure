@@ -265,14 +265,32 @@ shared_ptr<int> sp2{p);
 重载new和delete操作符同时将其设置为private类型。
 
 26、类型转换运算符
-static_cast:static_cast<type> (expression)，将express转换为type类型，在编译期间进行转换。但不保证转换安全。比如void *ptr = &d; double *dp = static_cast<double *> (ptr);这样可以将一个void *指针转换成一个double *类型的，
-但是编译器不会检查d是不是一个double类型的变量，这个要人为保证正确性。
-dynamic_cast:type必须是一个类类型，通常情况下要含有虚函数。dynamic_cast在运行期间进行类型转换。
-dynamic_cast<type *> (e)
-dynamic_cast<type &> (e)
-dynamic_cast<type &&> (e)
-const_cast:用于删除const、volatile和__unaligned特性。比如将const int转换为int。
-reinterpret_cast:reinterpret_cast<type> (expression)，只是对对象的类型进行重新解释，不会借助转换对对象数据进行调整，也不会判断对象转换前后的类型本身是否可以合法的进行转换。非安全。
+1)static_cast
+静态类型转换，不保证安全性。type a = static_cast<type>(b)
+1>常见类型转换，比如enum->int,int->char等。
+2>void类型指针转换成目标类型指针(不安全)。
+3>父类指针和子类指针的转换，但不安全。一般父类和子类指针之间的转换用dynamic_cast。
+4>不能进行无关类型的转换，也不能去掉const/volatile/__unaligned的属性。
+5>C++的隐式转换是通过static_cast实现。
+
+2)dynamic_cast
+动态类型转换，运行时类型识别(RTTI)，保证安全性。用于父类和子类之间的类型转换，同时要求必须有虚函数。
+1>type* p = dynamic_cast<type*>(e)，指针之间的动态转换，如果转换失败返回nullptr。
+子类指针转换成父类指针成功，父类指针转换成子类指针失败。
+2>type& d = dynamic_cast<type&>(e)，引用之间的动态转换，如果转换失败抛出bad_cast异常。
+3>对空指针nullptr可以使用dynamic_cast，转换成目标类型的空指针。
+
+3)const_cast
+int *p = const_cast<int*>(cp);//cp是const int*
+用于删除指针或引用的const、volatile特性。比如将const int*转换为int*。
+
+4)reinterpret_cast
+无关类型的之间的转换。type a = reinterpret_cast<type>(expression)
+只是对对象的类型进行重新解释，不会借助转换对对象数据进行调整，也不会判断对象转换前后的类型本身是否可以合法的进行转换。非安全。
+1>将指针转换成足够大的整型变量。
+2>将整形或enum转换成指针。
+3>从一个类型的函数指针转换成另一个类型的函数指针。
+4>从一个类的对象的指针转换成另一个类的对象指针。可以用于类成员和成员函数。
 
 27、constexpr函数指可以赋值给常量表达式的函数。要求函数返回的值必须是字面值且只有1个return语句。
 constexpr函数被隐式的指定成内联函数。
