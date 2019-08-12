@@ -1,0 +1,36 @@
+对称加密
+加密双方采用相同的密钥，称为公钥。
+
+非对称加密
+采用一对密钥，即公钥和私钥。私钥为自己使用，而公钥可以提供给任何人。被公钥加密的报文只能私钥解密，被私钥加密的报文只能公钥解密。
+
+数字证书
+网站在使用https之前，需要向CA申请一份数字证书。里面包含网站信息、网站公钥等信息。
+服务器会将自己的public和其他信息通过CA的私钥进行加密，得到数字证书。然后将数字证书发送给客户端。
+客户端使用CA的公钥来解密数字证书，得到服务器的公钥。然后客户端用服务器的公钥加密数据和自己的公钥并发送给服务端，这样就完成了密钥交换。
+
+https握手流程
+1、客户端发送client hello
+包含客户端支持的SSL版本、加密组件列表、支持的压缩算法列表、random_c随机数用于密钥生成、以及扩展字段。
+
+2、服务端连续发送server hello、certificate、(server key exchange)、server hello done。
+server hello包含使用的SSL版本、选择使用的加密组件、选择使用的压缩算法、随机数random_s用于密钥生成。
+certificate包含服务器的公钥。certificate通过CA的私钥进行加密。
+server hello done用于告知客户端server hello发送完成。
+
+3、客户端收到服务端上述报文之后，会发送client key exchange。包含pre-master secret随机密码串，通过服务端的公钥加密。
+此时客户端已经拥有计算密钥所需的信息：random_c、random_s、pre_master，根据这些计算得到密钥enc_key。
+然后客户端通过change cipher spec报文告知服务器后续的通信都采用协商的密钥加密通信。
+encrypted_handshake_message则是将之所有的通信参数哈希值加密之后发送给服务器，用于握手验证。
+
+4、客户端发送finished报文。握手协商能不能成功要看服务器能否正确解密该报文作为判定标准。
+5、服务器发送change cipher spec报文和finished报文。SSL连接建立完成。
+客户端通过自己的私钥解密得到pre-master secret随机密码串，用和客户端同样的算法根据random_c、random_s、pre-master计算得到enc-key。
+通过enc-key解密客户端发来的encrypted_handshake_message，验证通过之后，同样发送change cipher spec告诉客户端后续的通信采用协商的密钥加密通信。
+encrypted_handshake_message则是服务端结合当前的通信数据生成hash值，并用密钥加密发给客户端进行校验。验证通过则握手完成。
+
+
+session_id
+来自于server hello中的session id字段。是一个键值对，key是session id,value是密钥。客户端和服务端都会保存。
+第二次握手时，客户端如果想复用会话。就在client hello中session id设置上对应的值。服务器会根据client hello中的session id在本地进行查找。
+session_ticket
