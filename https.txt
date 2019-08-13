@@ -29,8 +29,15 @@ encrypted_handshake_message则是将之所有的通信参数哈希值加密之�
 通过enc-key解密客户端发来的encrypted_handshake_message，验证通过之后，同样发送change cipher spec告诉客户端后续的通信采用协商的密钥加密通信。
 encrypted_handshake_message则是服务端结合当前的通信数据生成hash值，并用密钥加密发给客户端进行校验。验证通过则握手完成。
 
-
 session_id
 来自于server hello中的session id字段。是一个键值对，key是session id,value是密钥。客户端和服务端都会保存。
 第二次握手时，客户端如果想复用会话。就在client hello中session id设置上对应的值。服务器会根据client hello中的session id在本地进行查找。
+如果有，则判断当前加密套件和上个会话的加密套件是否一致，一致则允许会话复用。server hello中携带的session id和client hello中一样。
+如果没有，则重新进行握手。server hello中的session id要么是重新计算与client hello中不一致，要么是0。
+缺点：就是客户端和服务端都需要保存session id。特别是服务端，当请求量很大的话，保存session id对于系统会有很大的开销。
+
 session_ticket
+客户端client hello报文中，在拓展字段带上空的session ticket，表示自己支持session ticket。
+服务端发现客户端支持session ticket，就会发送new session ticket报文。这个session ticket是加密过的。客户端收到之后，会将session ticket暂时保存。
+当客户端需要会话复用的时候，在client hello中携带session ticket。服务端收到session ticket之后就会解密来恢复会话信息。
+这样服务端就不需要保存任何数据。

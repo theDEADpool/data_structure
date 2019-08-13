@@ -345,7 +345,7 @@ struct ContainsB {
 [&,a,this]：引用传递方式捕捉父作用域的变量，变量a和this指针以值传递的方式捕捉。
 (parameters)：参数列表，如果不需要参数列表，则连同()一起省略。
 mutable：lambda函数默认是const函数，mutable可以取消其常量性，但如果用mutable修饰，参数列表不能省略，即使参数列表为空。
-->return-type：返回值类型，如果返回值类型明确，可以省略。由编译器自行推导。如果没有返回值也可以省略。
+->return-type：返回值类型，如果返回值类型明确，可以省略。由编译器自行推导。如果没有返回值也可以省略。比如返回int，写作->int。
 lambda函数默认是const函数，即函数内部不能修改变量。通过mutable修饰可以解除这个限定。
 
 35、decltype关键字
@@ -369,3 +369,11 @@ C++内存管理
 友元函数是类外函数，因此声明在类的私有区还是公有区没有区别。
 友元函数可以直接调用，不需要对象或指针。
 友元关系不能被继承，基类的友元对派生类无效。友元关系是单向的，A是B的友元类，不代表B是A的友元类。
+
+public、protect、private
+private：只能由类成员函数访问，不能通过类对象或派生类访问。
+protect：可以由类成员函数和派生类访问，不能通过类对象访问。
+不论是public、protect、private都可以通过友元函数访问。
+public继承：父类中的成员变量、成员函数的权限不变，public还是public、protect还是protect、private还是private。
+protect继承：父类中的成员变量、成员函数的权限改变，public变成protect。protect还是protect、private还是private。
+private继承：父类中的成员变量、成员函数的权限改变，public变成private、protect变为private。private还是private。
