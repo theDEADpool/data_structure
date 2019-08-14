@@ -3,6 +3,8 @@ family：协议族，AF_INET(ipv4)、AF_INET6(ipv6)、AF_LOCAL
 type：SOCK_STREAM(TCP)、SOCK_DGRAM(UDP)、SOCK_RAW(ping)
 protocol：IPPROTO_TCP、IPPROTO_UDP等
 函数成功时，返回非负的fd，错误返回-1。
+创建socket的时候type字段设置SOCK_NONBLOCK，就可以创建非阻塞的socket。
+除了创建和下面accept阶段设置非阻塞，还可以通过fcntl和ioctl来设置socket为非阻塞模式。
 
 2、int bind(int fd, const struct sockaddr* address, socklen_t address_len);
 address：包含要绑定的地址和端口号。
@@ -19,6 +21,8 @@ backlog：由于TCP连接是需要三次握手的，那么在服务器上有可�
 4、int accept(int fd, struct socketaddr* cli_addr, socklen_t* len);
 cli_addr：客户端的地址。
 服务器调用，函数成功时，返回非负的fd，错误返回-1。
+int accept4(int sockfd, struct sockaddr *addr, socklen_t *addrlen, int flags);
+flags设置为SOCK_NONBLOCK可以使accept得到的socket是非阻塞的。
 
 5、int connect(int fd, const struct sockaddr *servaddr, socklen_t addrlen);
 servaddr：需要连接的服务器ip和port。
@@ -31,10 +35,10 @@ MSG_DONTWAIT：仅本操作非阻塞。
 MSG_OOB：发送或接收带外数据。TCP连接上只有一个字节可以作为带外数据发送。对于recv，本标志指明即将读入的是带外数据。
 MSG_PEEK：窥看外来消息。作用于recv和recvfrom，允许我们查看已读取的数据，而且系统不再recv或recvfrom返回后丢弃这些数据。
 MSG_WAITALL：等待所有数据。作用于recv和recvfrom，告诉内核不要在尚未读入请求数目的字节之前，让一个读操作返回。
-函数成功则为发送的字节数，出错返回-1。
+函数成功则为发送的字节数，出错返回-1。返回值为0，表示对端关闭了socket。
 
 7、ssize_t recv(int fd, void *buf, size_t nbytes, int flags);
-函数成功则为接收的字节数，出错返回-1。
+函数成功则为接收的字节数，出错返回-1。返回值为0，表示对端关闭了socket。
 
 8、ssize_t sendto(int fd, const void *buf, size_t len, int flags, const struct sockaddr *to , socklen_t tolen);
 用于发送UDP报文。
@@ -51,7 +55,6 @@ to：用来指定目的ip和port。
 sszie_t sendmsg(int fd, struct msghdr *msg, int flags);
 函数成功则为发送或接收的字节数，若出错为-1。
 这两个接口是对其他发送和接收接口的整体封装。
-
 
 socket选项
 1、SO_REUSEADDR
@@ -77,6 +80,7 @@ socket选项
 TCP_KEEPIDLE设置多久没有数据传输就开始存活探测。
 TCP_KEEPINTVL设置两次探测之间的间隔。
 TCP_KEEPCNT设置探测次数。
+keepalive如果超时，会触发epoll事件可读，recv返回-1。错误码为ECONNRESET和ENETRESET。
 
 6、SO_LINGER
 有两个参数l_onoff和l_linger。
@@ -92,3 +96,8 @@ l_onoff为1，l_linger为1，如果socket发送缓冲区内有数据，则等待
 
 9、TCP_CORK
 启动CORK算法。
+
+socket操作常见错误errno
+EAGAIN，对于非阻塞socket不算错误，可以再次调用socket接口。
+EINTER，被系统调用中断，connect在这个错误码之后不能再次调用connect。只需要重新设置epoll事件就可以了。其他的socket接口可以再次调用。
+EINPROGRESS，连接进行中，可以通过epoll事件来判断是否完成。

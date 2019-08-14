@@ -5,6 +5,10 @@ PUT：传输文件，报文体中包含文件内容，保存到对应URL的位�
 HEAD：获取URL应答的首部，不返回报文主体。一般用于验证URL是否有效。
 DELETE：删除URL对应的文件。
 OPTIONS；查询URL支持的HTTP方法。
+TRACE：
+PATCH：
+CONNECT:
+具有幂等性的方法：DELETE\GET\PUT\HEAD\OPTIONS
 
 GET与POST的区别
 GET的参数携带在URL之后，通过"?"连接。多个参数之间通过"&"进行连接。由于受到URL长度的限制(不同服务器对于URL长度限制不一样，RFC中并没有明确规定URL的最大长度)，能够传递的数据量有限。
@@ -66,7 +70,7 @@ HTTP状态码
 400：bad request，客户端请求的语法错误。
 401：unauthorized，客户端身份没有认证。
 403：Forbidden，客户端无权访问请求的资源。
-404：服务端找不到请求URL所指向的资源。
+404：Not Found，服务端找不到请求URL所指向的资源。
 
 500：internal server error，服务器内部处理错误。
 502：bad gateway，服务器认为发送请求的网关或代理不正确。
