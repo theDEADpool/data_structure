@@ -4,6 +4,7 @@
 排序算法的思路就是先选择数组中的一个成员，将数组中所有比这个成员小的值都放在该成员的左边，所有比成员大的值都放在成员右边。
 然后以该成员为中心，将数组分成两个部分，重复上面的过程。直到数组无法再被分隔为止。
 
+C语言
 static int
 _Patition(int *num, int start, int end) {
     int i, j, tmp;
@@ -32,4 +33,25 @@ QuickSort(int *num, int start, int end) {
 		QuickSort(num, 0, start - 1);
 		QuickSort(num, start + 1, end);
     }
+}
+
+GO语言
+func quickSort(arr []int, start int, end int) {
+	if start < end {
+		idx := partition(arr, start, end)
+		quickSort(arr, start, idx - 1)
+		quickSort(arr, idx + 1, end)
+	}
+}
+
+func partition(arr []int, start int, end int) int {
+	i := start - 1
+	for j := start; j < end; j++ {
+		if arr[j] <= arr[end] {
+			i++
+			arr[i], arr[j] = arr[j], arr[i]
+		}
+	}
+	arr[i + 1], arr[end] = arr[end], arr[i + 1]
+	return i + 1
 }
