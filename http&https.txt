@@ -1,0 +1,137 @@
+http常用方法
+GET：请求URI对应的资源，可以通过URL传参数给服务器。
+POST：传输数据给服务器。
+PUT：传输文件，报文体中包含文件内容，保存到对应URL的位置。
+HEAD：获取URL应答的首部，不返回报文主体。一般用于验证URL是否有效。
+DELETE：删除URL对应的文件。
+OPTIONS；查询URL支持的HTTP方法。
+
+GET与POST的区别
+GET的参数携带在URL之后，通过"?"连接。多个参数之间通过"&"进行连接。由于受到URL长度的限制(不同服务器对于URL长度限制不一样，RFC中并没有明确规定URL的最大长度)，能够传递的数据量有限。
+GET只支持ASCII字符。GET的作用是从服务器获取资源。
+POST的数据则是携带在HTTP请求体中。一般用于大量数据的传输。POST支持多种编码格式。POST的作用是将数据发送给服务器。
+
+HTTP请求报文格式
+请求行：方法+URL+版本
+请求头：请求头部+通用头部+实体头部
+空行
+请求体
+
+HTTP应答报文格式
+状态行：版本+状态码+状态码的含义
+响应头：响应头部+通用头部+实体头部
+空行
+响应体
+
+http头部常用字段
+通用首部字段（请求报文与响应报文都会使用的首部字段）
+Date：创建报文时间
+Connection：连接的管理
+Cache-Control：缓存的控制
+Transfer-Encoding：报文主体的传输编码方式
+
+请求首部字段（请求报文会使用的首部字段）
+Host：请求资源所在服务器
+Accept：可处理的媒体类型
+Accept-Charset：可接收的字符集
+Accept-Encoding：可接受的内容编码
+Accept-Language：可接受的自然语言
+
+响应首部字段（响应报文会使用的首部字段）
+Accept-Ranges：可接受的字节范围
+Location：令客户端重新定向到的URI
+Server：HTTP服务器的安装信息
+
+实体首部字段（请求报文与响应报文的的实体部分使用的首部字段）
+Allow：资源可支持的HTTP方法
+Content-Type：实体主类的类型
+Content-Encoding：实体主体适用的编码方式
+Content-Language：实体主体的自然语言
+Content-Length：实体主体的的字节数
+Content-Range：实体主体的位置范围，一般用于发出部分请求时使用
+
+HTTP状态码
+1XX：服务器已收到请求，需要客户端继续执行操作。
+2XX：请求处理成功。
+3XX：重定向
+4XX：客户端错误
+5XX：服务端错误
+
+301：永久重定向，请求的资源已经移动到新的URI。返回信息包含新的URI。后续的请求都要使用新的URI。
+302：临时重定向，请求的资源临时移动到新的URI。客户端可以继续使用原有URI。
+304：资源未修改，服务端不会返回任何资源。
+1.0版本通过if-modify-since，expires作为判断资源是否改动的标准
+1.1版本提供了更多的策略比如entity-tag，if-match，if-none-match等
+
+400：bad request，客户端请求的语法错误。
+401：unauthorized，客户端身份没有认证。
+403：Forbidden，客户端无权访问请求的资源。
+404：服务端找不到请求URL所指向的资源。
+
+500：internal server error，服务器内部处理错误。
+502：bad gateway，服务器认为发送请求的网关或代理不正确。
+503：service unavailable，服务器由于负载高(nginx是在连接数超出限制、请求数超出限制条件下)等原因，暂时无法处理客户端的请求。
+
+http持久连接
+1.0版本是通过keep-alive头部实现的，这个功能默认是关闭的。
+Connection：Keep-alive
+Keep-alive：max=5, timeout=120
+timeout表示连接闲置多久后关闭。max表示在当前连接上最多会发送多少个http请求。
+
+1.1版本使用presistent取代了keep-alive。默认是开启的。除非http应答中Connection:close。
+如果客户端不想使用持久连接。那么就在请求中加上Connection:close。
+
+http的pipeline机制
+传统http流程是发请求收应答，再发请求收应答。如果某个请求处理的时间很长，会影响后续请求的处理。也就是队头阻塞。
+pipeline就是可以同时发多个请求，然后再接收应答。响应和请求的顺序是一致的。
+pipeline只有1.1版本才支持。仅能对GET和HEAD方法使用。pipeline要求和持久连接一起使用。
+
+http2.0的升级
+1、多路复用，多个请求共享一个tcp连接。通过request id来区分不同的请求。请求之间没有先后顺序关系。某一个请求处理时间的长短不会影响到其他请求。
+2、服务端主动推送。
+3、头部压缩，使用HPACK头部压缩算法对header进行编码。同时客户端和服务端都维护了头部信息的cache表。缓存出现过的头部。后续的http请求采用差量更新请求头的内容。对于不变的头部信息，只需要传递头部名称，对方根据名称从缓存中获取头部数据。
+4、采用二进制编码而非文本来传输数据。http2.0传输数据的时候将数据分成一个个的帧。定义了很多不同的帧类型。通过stream id进行关联。比如头部封装为headers帧、数据部分封装成data帧等。
+
+对称加密
+加密双方采用相同的密钥，称为公钥。
+
+非对称加密
+采用一对密钥，即公钥和私钥。私钥为自己使用，而公钥可以提供给任何人。被公钥加密的报文只能私钥解密，被私钥加密的报文只能公钥解密。
+
+数字证书
+网站在使用https之前，需要向CA申请一份数字证书。里面包含网站信息、网站公钥等信息。
+服务器会将自己的public和其他信息通过CA的私钥进行加密，得到数字证书。然后将数字证书发送给客户端。
+客户端使用CA的公钥来解密数字证书，得到服务器的公钥。然后客户端用服务器的公钥加密数据和自己的公钥并发送给服务端，这样就完成了密钥交换。
+
+https握手流程
+1、客户端发送client hello
+包含客户端支持的SSL版本、加密组件列表、支持的压缩算法列表、random_c随机数用于密钥生成、以及扩展字段。
+
+2、服务端连续发送server hello、certificate、(server key exchange)、server hello done。
+server hello包含使用的SSL版本、选择使用的加密组件、选择使用的压缩算法、随机数random_s用于密钥生成。
+certificate包含服务器的公钥。certificate通过CA的私钥进行加密。
+server hello done用于告知客户端server hello发送完成。
+
+3、客户端收到服务端上述报文之后，会发送client key exchange。包含pre-master secret随机密码串，通过服务端的公钥加密。
+此时客户端已经拥有计算密钥所需的信息：random_c、random_s、pre_master，根据这些计算得到密钥enc_key。
+然后客户端通过change cipher spec报文告知服务器后续的通信都采用协商的密钥加密通信。
+encrypted_handshake_message则是将之所有的通信参数哈希值加密之后发送给服务器，用于握手验证。
+
+4、客户端发送finished报文。握手协商能不能成功要看服务器能否正确解密该报文作为判定标准。
+5、服务器发送change cipher spec报文和finished报文。SSL连接建立完成。
+服务端通过自己的私钥解密得到pre-master secret随机密码串，用和客户端同样的算法根据random_c、random_s、pre-master计算得到enc-key。
+通过enc-key解密客户端发来的encrypted_handshake_message，验证通过之后，同样发送change cipher spec告诉客户端后续的通信采用协商的密钥加密通信。
+encrypted_handshake_message则是服务端结合当前的通信数据生成hash值，并用密钥加密发给客户端进行校验。验证通过则握手完成。
+
+session_id
+来自于server hello中的session id字段。是一个键值对，key是session id,value是密钥。客户端和服务端都会保存。
+第二次握手时，客户端如果想复用会话。就在client hello中session id设置上对应的值。服务器会根据client hello中的session id在本地进行查找。
+如果有，则判断当前加密套件和上个会话的加密套件是否一致，一致则允许会话复用。server hello中携带的session id和client hello中一样。
+如果没有，则重新进行握手。server hello中的session id要么是重新计算与client hello中不一致，要么是0。
+缺点：就是客户端和服务端都需要保存session id。特别是服务端，当请求量很大的话，保存session id对于系统会有很大的开销。
+
+session_ticket
+客户端client hello报文中，在拓展字段带上空的session ticket，表示自己支持session ticket。
+服务端发现客户端支持session ticket，就会发送new session ticket报文。这个session ticket是加密过的。客户端收到之后，会将session ticket暂时保存。
+当客户端需要会话复用的时候，在client hello中携带session ticket。服务端收到session ticket之后就会解密来恢复会话信息。
+这样服务端就不需要保存任何数据。
