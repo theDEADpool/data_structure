@@ -30,16 +30,3 @@ void SelectionSort(int arr[], int len)
 		}
 	}
 }
-
-int main()
-{
-	int arr[]={42,20,17,13,28,14,23,15};
-	int len = sizeof(arr)/sizeof(int);
-	int i;
-	SelectionSort(arr,len);
-	for(i=0; i<len; i++)
-    {
-        printf("arr[%d]=%d\n",i, arr[i]);
-    }
-	return 0;
-}

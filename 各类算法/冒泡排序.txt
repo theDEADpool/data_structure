@@ -27,15 +27,18 @@ void BubbleSort(int arr[], int num)
     }
 }
 
-int main()
-{
-    int i;
-    int arr[7]={2,7,4,6,3,1,9};
-    BubbleSort(arr, sizeof(arr)/sizeof(int));
-    printf("length of arr is %ld\n", sizeof(arr)/sizeof(int));
-    for(i=0; i<sizeof(arr)/sizeof(int); i++)
-    {
-        printf("arr[%d]=%d\n",i, arr[i]);
-    }
-    return 0;
-}
+排序算法的稳定性就是看排序后连个值相等的元素在数组中的先后位置和排序之前是否相等。
+常见的稳定排序算法有：
+冒泡排序（Bubble Sort） — O(n²)
+插入排序（Insertion Sort）— O(n²)
+桶排序（Bucket Sort）— O(n); 需要 O(k) 额外空间
+计数排序 (Counting Sort) — O(n+k); 需要 O(n+k) 额外空间
+合并排序（Merge Sort）— O(nlogn); 需要 O(n) 额外空间
+二叉排序树排序 （Binary tree sort） — O(n log n) 期望时间; O(n²)最坏时间; 需要 O(n) 额外空间
+基数排序（Radix sort）— O(n·k); 需要 O(n) 额外空间
+
+常见的不稳定排序算法有：
+选择排序（Selection Sort）— O(n²)
+希尔排序（Shell Sort）— O(nlogn)
+堆排序（Heapsort）— O(nlogn)
+快速排序（Quicksort）— O(nlogn) 期望时间, O(n²) 最坏情况; 对于大的、乱数串行一般相信是最快的已知排序
