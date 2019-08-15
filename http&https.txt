@@ -4,10 +4,10 @@ POST：传输数据给服务器。
 PUT：传输文件，报文体中包含文件内容，保存到对应URL的位置。
 HEAD：获取URL应答的首部，不返回报文主体。一般用于验证URL是否有效。
 DELETE：删除URL对应的文件。
-OPTIONS；查询URL支持的HTTP方法。
-TRACE：
-PATCH：
-CONNECT:
+OPTIONS；查询URL指定的资源在请求和响应的过程中可以使用的功能选项。如果URL为‘*’可以起到类似于ping的作用。
+TRACE：使服务端会原样返回任意客户端请求的任何内容。是一种调试方法，不安全，因此要在服务端关闭TRACE方法。
+PATCH：对资源进行局部更新，对PUT方法的补充。
+CONNECT：将对象服务器作为代理，通过对象服务器访问其他网页。
 具有幂等性的方法：DELETE\GET\PUT\HEAD\OPTIONS
 
 GET与POST的区别

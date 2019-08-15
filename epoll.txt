@@ -18,6 +18,7 @@ ET:边缘触发，当被监控的文件描述符上有可读写事件时，epoll
 
 使用边缘触发时，以读数据为例，如果recv函数返回的字节数和用于接受数据的缓存大小相同时，
 则有可能缓冲区内还有数据没有读完。此时需要再次调用recv函数。
+ET触发，如果是accept，需要多次调用。因为每次调用accept只会处理一个建立的连接。但新建连接可能不止一个。不循环调用accept会导致连接没有被处理。
 
 select、poll、epoll
 相同点:
@@ -67,7 +68,17 @@ struct epitem{
     struct epoll_event event; //期待发生的事件类型
 }
 当调用epoll_wait检查是否有事件发生时，只需要检查eventpoll对象中的rdlist双链表中是否有epitem元素即可。如果rdlist不为空，则把发生的事件复制到用户态，同时将事件数量返回给用户。
-epoll支持的事件类型：
+typedef union epoll_data {
+	void *ptr;
+	int fd;
+	__uint32_t u32;
+	__uint64_t u64;
+} epoll_data_t;
+struct epoll_event {
+	__uint32_t events;
+	epoll_data_t data;
+}
+epoll支持的events事件类型：
 EPOLLIN：触发该事件，表示对应的文件描述符上有可读数据。(包括对端SOCKET正常关闭)； 
 EPOLLOUT：触发该事件，表示对应的文件描述符上可以写数据； 
 EPOLLPRI：表示对应的文件描述符有紧急的数据可读（这里应该表示有带外数据到来）； 
@@ -77,14 +88,15 @@ EPOLLET：将EPOLL设为边缘触发(EdgeTriggered)模式，这是相对于水�
 EPOLLONESHOT： 只监听一次事件，当监听完这次事件之后，如果还需要继续监听这个socket的话，需要再次把这个socket加入到EPOLL队列里。
 
 int epoll_create(int size) size表示要处理的大致事件数目，新版本的linux内核这个参数没有意义。
-nginx在调用epoll_create传入的size是connection_n / 2。
+nginx在调用epoll_create传入的size是connection_n / 2。是在epoll模块init的阶段调用的epoll_create。一个进程一个epollfd。
+项目是一个线程创建一个epollfd，比如tcp的accept线程，读写线程，udp线程等。
 
 int epoll_ctl(int epfd, int op, int fd, struct epoll_event *ev)
 epfd就是epoll_create返回的fd。
 fd是待检测的socket的fd。
 op有三种EPOLL_CTL_ADD、EPOLL_CTL_MOD、EPOLL_CTL_DEL。
 ev就是上面说的支持的事件类型。
-nginx在使用的时候传入的ev就是一个局部变量，设置好本次操作的事件类型即可。
+nginx在使用的时候传入的ev就是一个局部变量，设置好本次操作的事件类型即可。ev中的data保存的就是ngx_connection_t结构的地址。
 
 int epoll_wait(int epfd, struct epoll_event *ev, int maxevent, int timeout)
 返回值表示当前发生的事件个数。返回-1表示出现错误需要看errno返回码。
@@ -92,3 +104,7 @@ timeout表示最多等待多少毫秒后返回。
 maxevent表示本次可以返回的最大事件数目。
 ev是一个事件数组用来存储触发的事件。
 nginx使用的时候传入的ev是一个全局变量，数组的长度是通过配置决定的，默认值是512。
+nginx在epoll_wait触发返回所有事件的数组，数组成员是epoll_event，其中data字段存放的就是ngx_connection_t数据结构，里面就保存了连接的读写处理函数。
+项目的用法是，在epoll_event数据结构的data字段保存待处理的socket的fd。epoll_wait在事件触发后返回所有触发事件的数组。线程遍历触发事件的数组。
+从中取出待处理的fd，然后根据fd找到对应的数据结构。数据结构中保存了fd的读写处理函数。根据触发的epoll事件类型调用对应的处理函数。
+
