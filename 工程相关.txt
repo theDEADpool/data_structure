@@ -61,9 +61,9 @@ core文件名携带pid
 cat /etc/sysctl.conf
 kernel.core_uses_pid = 1
 
+gdb命令
 bt N 显示前N个调用栈
 bt -N 显示后N个调用栈
-
 info reg 显示寄存器内容
 p /x 显示十六进制数
 p /o 显示八进制数
@@ -74,33 +74,61 @@ p /d 显示十进制数
 p /s 显示字符串
 p /f 显示浮点数
 p /a 显示地址
-
 watch 在变量或者语句发生变化的时候暂停执行
 awatch 在变量或者语句被调用、改写的时候暂停执行
 rwatch 在变量或者语句被调用的时候暂停执行
-
 set variable 变量 = 表达式  可以认为的设置变量的值
 generate-core-file 产生core文件
 
+ps命令
+进程的5种状态：R run、S sleeping、T 停止、Z 僵尸进程、D 不可中断
+常用选项
+-A 显示所有进程，与-e一样
+-l 长格式
+-f 显示完成信息
+-L 显示每个进程的线程
 ps aux -L | grep xxx 表示显示某一个进程的所有线程
-其中进程状态一栏
-R表示正在执行
-Sl表示sleep
 
-tcpdump
+tcpdump命令
 -nn 把地址和端口显示为数值，否则显示为主机名和服务名
 -P 指定抓取的包是流入包还是流出包，"in"、"out"、"inout"
 -XX 输出包头数据，以16进制和ASCII两种方式同时输出，且详细输出
 -c 指定抓包的个数
-
+-w 将装包的内容输出到指定文件
+-i 指定抓哪个网口
+-v 输出详细的报文信息
+-vv 输出更详细的报文信息
+src 源地址
+dst 目的地址
+src port
+dst port
+host 指定主机或者目的地址
 tcpdump src host [ip/hostname] dst host [ip/hostname] tcp/udp port [xxx]
 
+strace
+-tt 每行输出之前显示时间，单位毫秒。
+-T 每次系统调用花费的时间。
+-f 跟踪目标进程及其创建的所有子进程。
+-e 指定要跟踪的系统调用名称
+-o 把结果输出到指定的文件
+-p 指定跟踪的进程，如果要指定多个进程就写多个-p
+-s 当系统调用某个参数是字符串的时候输出指定长度的内容，默认是32个字节
+命令格式：
+跟踪未启动的进程: strace [各类选项] [启动进程的命令，比如/usr/bin/nginx]
+跟踪已启动的进程：strace [各类选项] -p 进程号
+
 CPU跑满排查-->一般情况下就是死循环
-top命令可以找到CPU跑满的进程。
+top命令可以找到CPU跑满的进程。顺便可以检查内存使用量是否正常。
 top -H -p pid 查看某个进程的线程情况。
 ps命令可以找到某个进程和其线程的CPU使用情况 -T选项可以查看线程。
-pstack命令则可以看到某个线程的调用栈信息
+pstack命令则可以看到某个线程的调用栈信息，pstack [进程号]
 strace可以查看程序运行过程中的系统调用。
 
 内存检测工具
-addressSanitizer
+addressSanitizer 检查内存越界访问
+基本原理就是替换操作系统的malloc和free函数，在申请内存时候在内存周围填充一些特殊字节，在程序释放内存的时候，填充了特殊字节的内存会暂时保留。然后在程序运行的过程中检查填充了特殊字节的内存是否被修改。
+需要gcc4.8版本及以上的编译器或者clang。编译的时候带上参数CFLAG='-g-O0-fsnitize=address-fno-omit-frame-pointer-lasan'
+设置环境变量export ASAN_OPTIONS="log_path=/tmp/asan.log"
+把环境变量加到程序的启动脚本里面才能生效，/etc/init.d/xxxx
+
+valgrind

@@ -1,0 +1,24 @@
+使用的openresty配置
+user root;
+worker_connections 10240;
+worker processes auto;
+
+keepalive_timeout 单位秒，每个TCP连接最多可以保持多长时间。处理完一个http请求之后保持TCP继续存活，这时如果有新的请求，可以利用这个TCP连接，不需要新建。
+lua_shared_dict
+lua_socket_log_errors
+log_format
+
+gzip
+gzip_types
+gzip_http_version;
+gzip_min_length
+
+server里面
+client_max_body_size
+client_body_buffer_size
+
+location里面
+allow
+deny
+access_by_lua
+content_by_lua
