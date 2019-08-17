@@ -50,7 +50,7 @@ void build_max_heap(int *nums, int len) {
     }
 }
 
-void min_heap_sort(int *nums, int len)
+void max_heap_sort(int *nums, int len)
 {    
     build_max_heap(nums, len);
 
