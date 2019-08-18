@@ -4,7 +4,7 @@
 第二次遍历n-2个数，找到最小的数值与第二个元素交换；
 。。。
 第n-1次遍历，找到最小的数值与第n-1个元素交换，排序完成。
-平均时间复杂度：O(n2)
+平均时间复杂度：O(n^2)
 */
 #include<stdio.h>
 void SelectionSort(int arr[], int len)

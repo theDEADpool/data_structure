@@ -1,0 +1,25 @@
+quic的特点
+0-rtt建连
+
+单调递增的packet number
+tcp重传数据的seq num和原始数据的seq num是一样的。当收到ack的时候，无法判定是ack原始数据还是重传数据。这对于计算rtt或重传率有影响。
+quic的packet number是递增的，保证重传包和原始包的num是不一样的。quic还通过steam offset来保证数据的顺序。重传包和原始包的num不一样，但是offset是一样的。
+
+steam和conneciton级别的流量控制
+connection可以理解为一个tcp连接，steam可以理解为http请求。一个connection上可以同时传输多个steam。
+通过window_udpate帧告诉对方自己还可以接收的字节数。
+通过block帧告诉对方流量阻塞了，不能发送数据。
+steam的可用窗口大小 = 最大窗口 - 接收到数据的最大偏移量
+connection的可用窗口大小 = 所有steam可用窗口相加
+
+没有队头阻塞的多路复用
+quic不同steam之间互相不会影响，某个steam丢包不会影响其他steam的数据处理。
+http虽然也可以在一条tcp连接上发送多个http请求，但tcp本身就是要求有序，所以前面的包没有到达，后续的包即使到达了也不能被处理。
+
+连接迁移
+tcp是通过五元组来确定一条连接的。而quic则是通过connectionID来确定一条连接的，即使连接双方的ip发生了变化，也不会影响连接。
+
+改进的拥塞控制
+应用层实现了拥塞控制，不需要内核支持。可以根据不同的客户选择使用不同的拥塞控制算法。只需要重配置就可以完成拥塞控制算法的切换。
+
+建连过程
