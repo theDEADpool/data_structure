@@ -2,6 +2,10 @@
 #include <stdlib.h>
 #include <time.h>
 
+//floyd算法计算的是图中所有的点两两之间的最短距离。基本原理和Dijkstra算法很相似
+//比如计算i和j之间的最短路径，就是看ij之间的距离和i->k->j之间的距离，哪个更小。
+//如果找到更小的就更新ij之间的最短距离。
+//floyd算法适用于稠密图
 void floyd(const int n, unsigned int dist[n][n], unsigned int path[n][n])
 {
 	int i, j, k;
