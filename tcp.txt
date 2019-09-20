@@ -6,6 +6,7 @@
 MSS是TCP允许发送的最大数据部分的长度。
 MTU是1500字节，去掉IP头20字节和TCP头20字节之后剩下1460字节，就是默认情况下MSS的大小。MSS只会在syn报文中携带。连接的MSS，是服务端和客户端两个MSS中最小的那一个。
 当实际发送的数据大小超过MSS就会出现TCP分块。
+TCP连接的起始序列号是随机生成的。
 
 为什么要采用三次握手，两次不行吗？
 如果改成两次握手，即客户端发送SYN，服务器发送SYN+ACK，在服务器发送SYN+ACK之后无法知道客户端是否正确处理了SYN+ACK（可以是没收到，也可以是客户端程序异常没正确处理），
@@ -28,7 +29,7 @@ MTU是1500字节，去掉IP头20字节和TCP头20字节之后剩下1460字节，
 2.防止前面提到的“已失效的连接请求报文段”出现在本连接中。A在发送完最后一个ACK后，再经过两个时间周期，就可以使本连接持续的时间内所产生的所有报文都
 从网络中消失，这样就可以使下一个新的连接中不会出现这种旧的连接请求报文段。
 
-为什么建立连接协议是三次握手，而关闭连接确是四次？
+为什么建立连接协议是三次握手，而关闭连接却是四次？
 因为服务端的LISTEN状态下的socket当收到SYN报文的连接请求后，可以吧ACK和SYN放在同一个报文来发送。但关闭连接时，当收到对方的FIN报文
 通知时，仅仅表示对方没有数据发送给你了，但是未必你的所有数据都发送给对方了，所以可能未必会马上关闭SOCKET，可能还要发送一些数据给对方
 之后，再发送FIN报文给对方来表示你同意现在可以关闭连接了，所以关闭连接的时候FIN和ACK通常都是分开发送的。
@@ -124,10 +125,18 @@ TCP和UDP的区别
 2、TCP可靠，UDP不可靠。
 3、TCP流传输，数据有序。UDP包传输，数据无序。
 4、TCP有拥塞控制，UDP没有。
+5、TCP占用的系统资源多于UDP，TCP的效率比UDP低。
 
 代码层面：
 1、TCP和UDP的socket参数不同。
-2、TCP服务端有accept，客户端有connect，UDP没有。
+2、TCP服务端有accept，客户端有connect。UDP客户端可以connect，然后用send/recv收发数据。也可以不用connect，用sendto、recvfrom收发数据。
 3、TCP发送接收用的send、recv。UDP发送接收用的sendto、recvfrom。
-4、TCP占用系统资源多于UDP。
+TCP客户端
+创建socket、bind(可选)、connect、send/recv
+TCP服务端
+创建socket、bind、listen、accept、send/recv
+UDP客户端
+socket、bind(可选)、sendto
+UDP服务端
+socket、bind、recvfrom
 
