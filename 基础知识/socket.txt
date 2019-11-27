@@ -36,6 +36,7 @@ MSG_OOB：发送或接收带外数据。TCP连接上只有一个字节可以作�
 MSG_PEEK：窥看外来消息。作用于recv和recvfrom，允许我们查看已读取的数据，而且系统不再recv或recvfrom返回后丢弃这些数据。
 MSG_WAITALL：等待所有数据。作用于recv和recvfrom，告诉内核不要在尚未读入请求数目的字节之前，让一个读操作返回。
 函数成功则为发送的字节数，出错返回-1。返回值为0，表示对端关闭了socket。
+send的用法就是for循环不断调用send，然后累计send每次返回的已发送字节数。调用者根据实际业务判断数据是否已经发送完成，然后结束for循环。
 
 7、ssize_t recv(int fd, void *buf, size_t nbytes, int flags);
 函数成功则为接收的字节数，出错返回-1。返回值为0，表示对端关闭了socket。
