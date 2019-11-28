@@ -1,5 +1,36 @@
 quic的特点
 
+TLS1.3建连过程
+1-RTT
+1.client发送client hello，携带以下信息：
+支持的加密算法。
+支持的TLS协议版本号。
+支持的椭圆曲线类型。
+key_shares，根据支持的所有椭圆曲线计算出来的公钥。
+2.server发送server hello，携带以下信息：
+从client支持的TLS协议版本号中选择的一个版本号。
+从client支持的椭圆曲线中选择的一个椭圆曲线。
+根据选择的椭圆曲线生成公钥。
+从这个报文开始，后面所有发送的报文都是加密的。
+3.server发送Encrypted Extension(EE)报文。server hello之后需要立刻发送EE报文，这是被加密的。
+4.server发送certificate报文。加密。服务端的证书链。
+5.server发送certificate verify。将之前所有的报文生成认证信息发送给客户端。
+6.server发送finished，表示握手结束。
+7.client发送finished，表示握手结束。
+握手过程中由于可能乱序或者丢包，客户端可能提前收到加密数据，而没有收到密钥。这种情况下可以选择丢弃也可以选择缓存加密数据。
+
+0-RTT
+1.client发送client hello，携带pre_shared_key、early_data等拓展。
+2.client发送被加密的application data。
+3.server发送server hello。携带pre_shared_key，表示自己正常解析了client发送的pre_shared_key。
+4.server发送Encrypted Extension。
+5.server发送finished。
+
+1-RTT建连阶段发送的包被称作long headers。long headers包含有两个连接ID，src连接ID和dst连接ID。A给B发送报文的时候DST连接ID就是B的SRC连接ID。A的SRC连接ID就是B的DST连接ID。
+第一次发包的时候A不知道B的SRC连接ID，此时A的DST连接ID是不小于8字节的任意值。在收到B的回包之前，A的DST连接ID都必须相同。
+A在两种情况下会改变DST连接ID，一是收到了B的retry包，二是收到了B的initial包。
+AB两端都会保存一组对端发来的连接ID。任何的连接ID都可以在发送数据时候使用。如果不需要继续使用，就通过RETIRE_CONNECTION_ID帧告诉对方。并要求对方通过NEW_CONNECTION_ID帧发送一个新的连接ID来替代旧的。
+
 单调递增的packet number
 tcp重传数据的seq num和原始数据的seq num是一样的。当收到ack的时候，无法判定是ack原始数据还是重传数据。这对于计算rtt或重传率有影响。
 quic的packet number是递增的，保证重传包和原始包的num是不一样的。quic还通过stream offset来保证数据的顺序。重传包和原始包的num不一样，但是offset是一样的。
@@ -21,16 +52,6 @@ tcp是通过五元组来确定一条连接的。而quic则是通过connectionID�
 改进的拥塞控制
 应用层实现了拥塞控制，不需要内核支持。可以根据不同的客户选择使用不同的拥塞控制算法。只需要重配置就可以完成拥塞控制算法的切换。
 
-建连过程
-1-RTT建连过程
-1、client端发送hello报文。
-2、server端发送hello报文，发送handshake报文，加密过，携带证书等相关信息。发送数据报文序号0，stream帧。
-handshake报文中包含计算秘钥需要的server端生成的随机数。
-3、client端发送ACK，对应server的hello报文。发送handshake报文包含FIN帧，ACK帧。对应server的handshake报文。以及数据报文序号0，stream帧。
-client端收到server端发来的随机数，加上自己生成的随机数，就可以根据算法计算一个密钥。然后通过这个密钥加密报文。同时发给server端的handshake报文也会携带client端自己生成的随机数。这样server端根据这个随机数也能计算出密钥。
-
-0-RTT建连过程
-跟上面不同的是，client端在发送第一个hello报文的时候，也发送了数据报文序号0，stream帧。
 
 连接ID协商
 Long header包是建联过程中发送的包，包含了source connection ID和dest connection ID。接收端到之后根据dest ID来选择连接，而将src ID设置为自己的dest ID。第一次发包的一方是不知道对方的dest ID值，这时候会填充不小于8字节的随机值。

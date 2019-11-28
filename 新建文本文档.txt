@@ -7,12 +7,62 @@ redis
 		整数集合
 	事务
 	pipeline
-	sentinel		1
+	sentinel	1
 	cluster
-	分布式锁
+	分布式锁	1
 	主备同步
 	持久化
 		RDB		1
 		AOF		1
-	数据过期		1
-	数据淘汰
+	数据过期	1
+	数据淘汰	1
+C语言
+epoll、select、poll		1
+tcp
+	RENO	1
+	BIC	1
+	BBR	1
+	糊涂窗口	1
+	NAGLE算法	1
+	CORE算法	1
+http、https
+	头部字段
+	状态码
+	建连过程
+	持久连接
+	pipeline
+	多路复用
+NGINX
+	常用配置
+	socketpair
+	信号
+	文件锁
+	互斥锁
+	自旋锁
+OPENRESTY
+	常用配置
+OSPF
+K8S
+VXLAN
+操作系统
+	进程fork vfork，写时复制
+	线程、协程
+	进程间通信
+	进程间同步
+	死锁
+	内存管理
+	
+GO语言
+	调度器	1
+	垃圾回收	1
+	context	1
+	init函数	1
+	defer函数	1
+	channel	1
+	select	1
+	sync.WaitGroup	1
+quic
+	建连	1
+	连接ID协商	1
+	连接迁移
+	地址校验
