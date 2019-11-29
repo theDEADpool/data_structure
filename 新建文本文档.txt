@@ -26,7 +26,7 @@ tcp
 	NAGLE算法	1
 	CORE算法	1
 http、https
-	头部字段
+	头部字段	1
 	状态码
 	建连过程
 	持久连接
