@@ -1,39 +1,40 @@
 redis
 	常用数据结构
-		字典	1
-		字符串	1
-		压缩列表	1
-		跳跃表	1
-		整数集合
-	事务
+		字典	1	2张哈希表 扩容缩容
+		字符串	1	预分配空间  惰性回收空间
+		压缩列表	1	查找的时间复杂度O(N^2)
+		跳跃表	1	
+		整数集合 1	int16 int32 int64 只升级不降级 加入元素二分法查找， 升级不需要二分查找 加头或尾
+	事务	1 ACID watch  事务取消  事务执行忽略错误
 	pipeline
-	sentinel	1
+	sentinel	1	命令连接 订阅连接 INFO publish subscribe  主观下线 客观下线 故障转移
 	cluster
-	分布式锁	1
-	主备同步
+	分布式锁	1 setnx expire 随机数
+	主备同步	PSYNC 完整同步 + 增量同步
 	持久化
-		RDB		1
-		AOF		1
-	数据过期	1
+		RDB		1	SAVE或BGSAVE 子进程  多少时间内超过多少次改动触发  dirty字段保存了数据库的改动
+		AOF		1	写入AOF文件时机 always everysec no	AOFREWRITE
+	数据过期	1	惰性删除 读写操作的时候判断是否过期ifneedexpire  定期删除 每次20个key  超过5个key过期 再取20个key RDB创建读入都会判断是否过期 AOF重写过程会判断是否过期
 	数据淘汰	1
+	发布订阅
 C语言
 epoll、select、poll		1
 tcp
 	RENO	1
 	BIC	1
 	BBR	1
-	糊涂窗口	1
-	NAGLE算法	1
-	CORE算法	1
+	糊涂窗口	1	产生大量小报文
+	NAGLE算法	1	只允许一个未确认的小于MSS的报文在传输
+	CORE算法	1	多个小包组合成一个大包
 http、https
-	头部字段	1
-	状态码
+	头部字段	1	date content-length content-encoding connect
+	状态码		
 	建连过程
-	持久连接
+	持久连接	1	1.0 keepalive 1.1 connect：close 
 	pipeline
 	多路复用
 NGINX
-	常用配置
+	常用配置	1
 	socketpair
 	信号
 	文件锁
@@ -45,21 +46,28 @@ OSPF
 K8S
 VXLAN
 操作系统
-	进程fork vfork，写时复制
-	线程、协程
+	进程fork vfork，写时复制	1
+	线程、协程	1
 	进程间通信
+		管道
+		共享内存
+		信号
+		socket
 	进程间同步
-	死锁
-	内存管理
+		锁		
+		信号量		1
+		条件变量	1
+	死锁		1
+	内存管理	1
 	
 GO语言
-	调度器	1
-	垃圾回收	1
-	context	1
-	init函数	1
-	defer函数	1
-	channel	1
-	select	1
+	调度器	1 GMP
+	垃圾回收	1	三色标记
+	context	1	goroutine上下文
+	init函数	1	每个包可以有多个，每个init只执行一次
+	defer函数	1	后创建先执行
+	channel	1	读写 只读 只写  有缓存 无缓存
+	select	1	多个case随机执行 没有case阻塞  防止阻塞default + for循环
 	sync.WaitGroup	1
 quic
 	建连	1
