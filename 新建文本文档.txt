@@ -29,7 +29,7 @@ tcp
 	time_wait	客户端收到对端的fin并发出ack之后进入这个状态，等待两个2MSL 为什么是2MSL
 	close_wait	服务端收到对端的fin并发出ack之后进入这个状态
 http、https
-	头部字段	1	date content-length content-encoding connect
+	头部字段	1	date content-length content-encoding connect last-modify
 	状态码		200 201 300 301 302 400 401 402 403 404 500 502 503 505
 	建连过程	数字证书？
 	持久连接	1	1.0 keepalive 1.1 connect：close 
