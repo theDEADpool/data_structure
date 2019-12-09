@@ -32,14 +32,15 @@ RouteID最大的路由器将被选举为DB。第二大的被选举为BDR。
 3、LSR包
 链路状态请求包，路由器收到包含新内容的DBD包之后，请求更详细的信息。
 4、LSU包
-链路状态更新包，收到LSR包之后发送LSA，通告链路状态。一个LSU可能包含几个LSA。
+链路状态更新包，收到LSR包之后发送LSA，通告链路状态。一个LSU可能包含几个LSA。可以给其他邻居路由器发送，也可以自己以组播的方式洪泛本地LSA。
+收到LSA之后需要通过ack确认，对于没有收到的LSA重传，重传是点对点发送的。
 5、LSA包
 链路状态确认包，确认收到LSU。
-type1 路由器LSA 由区域内路由器发出，描述该路由器到本区域内部的链路状态和cost。边界路由器可以产生多个不同的type1 LSA。
+type1 路由器LSA 每个路由器都会产生，在所属的区域内传播。描述该路由器到本区域内部的链路状态和cost。边界路由器可以产生多个不同的type1 LSA。
 type2 网络LSA 由区域内DR发出，描述区域内所有链路状态信息。
-type3 网络汇总LSA 由ABR发出给其他区域汇总链路通告
-type4 ASBR汇总LSAE 由主干区域发给其他ABR，用于通告ASBR的信息。
-type5 AS外部LSA 由ASBR发出的，用于通告外部路由信息。
+type3 网络汇总LSA 由ABR产生描述区域内所有网段的路由，通告给其他区域。
+type4 ASBR汇总LSAE 由ARB产生描述到ASBR的路由，通告给除ASBR所在区域内的其他区域。
+type5 AS外部LSA 由ASBR产生描述到AS外部的路由，通告除stub区域和NSSA区域外的所有区域。
 type7 NSSA外部LSA NSSA区域内ASBR发出，用于通告本区域连接的外部路由
 
 OSPF的7个状态
@@ -51,10 +52,12 @@ INIT：收到了邻居的hello包，但没有自己的routeID。
 
 EXSTART、EXCHANGE、LOADING、FULL状态
 路由器建立完全邻接关系的过程。
-EXSTART：发送自己的空DBD报文和收到邻居的空DBD报文，确定主从关系。routeID大的路由器为主。
+EXSTART：发送自己的空DBD报文和收到邻居的空DBD报文，确定主从关系。routeID大的路由器为主。主路由器决定DBD报文的序号。
 EXCHAGE：互相发送DBD报文同步自己的链路状态数据库。
 LOADING：发送LSR包请求链路状态的详细信息。收到邻居回复的LSA报文。
 FULL：区域内所有的路由器链路状态信息达成一致。
+
+接口cost值的计算方法 10的8次方/接口带宽。也可以人工指定。
 
 OSPF网络类型
 点到点网络
