@@ -13,9 +13,6 @@ vm -- vtep -vxlan隧道- vtep --vm
 如果vin和bd不同，则需要三层网关；
 
 
-
-
-
 VXLAN术语
 VTEP
 VXLAN Tunnel EndPoint。VTEP负责VXLAN报文的封装与解封装，包括ARP请求报文和正常的VXLAN数据报文。

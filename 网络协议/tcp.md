@@ -149,7 +149,8 @@ FRTO是判断RTO是不是真的，如果不是真的就不进LOSS状态；
 ## 断连
 ### 状态转移
 established-发送FIN->FIN_WAIT1->收到ack->FIN_WAIT2-收到FIN发送ack->TIME_WAIT->等待2MSL->CLOSED；  
-established-收到FIN发送ack->CLOSE_WAIT->发送FIN->LAST_ACK->收到ack->CLOSED；  
+established-收到FIN发送ack->CLOSE_WAIT->发送FIN->LAST_ACK->收到ack->CLOSED； 
+timewait优化，可以增加一个配置项来控制timewait状态的等待时间。默认60s，最小1s，最大60s；   
 
 ### Close与Shutdown的区别
 1. shoudown只能用于socket fd，close可以用于所有文件fd；  
