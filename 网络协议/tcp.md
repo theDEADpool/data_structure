@@ -89,8 +89,7 @@ d. 退避次数能超过tcp_retires2的值，如果探测包发送成功，则�
 sysctl_tcp_sack = 1，本端开启sack功能，需要双方协商；  
 tcp_syn_options中判断如果sysctl_tcp_sacked == 1，则携带OPTION_SACK_ADVERTISE选项，在tcp_option_write时候写入TCPOPT_SACK_PERM选项；  
 对端收到syn，解析到TCPOPT_SACK_PERM，且本端也开启了sack功能，则设置sack_ok，在synack的option中通过OPTION_SACK_ADVERTISE选项告知对端；  
-
-### 空间序丢包判定
+基于空间序的丢包判定，如果ca状态 < Recovery， 则收到dupack数量 >= reordering会判定丢包；如果ca状态 == Recovery，每次确认新的数据都会把重传丢列头部的skb标记为lost；  
 
 ### RACK
 基于时间序的丢包判定机制，当收到一个sack，说明存在乱序，就根据最近被确认数据包的发送时间来推测该数据包之前发送的数据包是否已经丢包，并启动快速重传；  
@@ -130,6 +129,8 @@ tsorted_sent_queue是按时间顺序记录发送skb队列，而tcp_rtx_queue是�
 2. 整窗数据 or ack都丢了，也无法触发FR；  
 3. Dup acks不够，无法触发FR；  
 4. 超长rtt导致rto比ack先触发；  
+tcp_schedule_loss_probe
+tcp_send_loss_probe
 定时器2 * srtt超时时间，如果当前packet_out == 1，则多加TCP_RTO_MIN来规避delayed ack；  
 超时后如果有新数据则发送新数据，没有新数据则发送seq最大的数据包来触发对端回ack/sack；  
 
