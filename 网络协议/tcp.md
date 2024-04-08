@@ -187,6 +187,13 @@ timewait优化，可以增加一个配置项来控制timewait状态的等待时�
 该配置可以是负数，即socket不会进入FIN_WAIT2状态直接进入tcp_done，并发送RST;  0则配置不生效；  
 
 ## 其他
+### CA状态机
+1. TCP_CA_OPEN：正常状态；  
+2. TCP_CA_Disorder：乱序状态，重传队列首包已经重传过，且还存在尚未恢复的乱序包；  
+3. TCP_CA_CWR：拥塞窗口减少，tcp_enter_cwr，进入条件：收到了携带ecn-ece标记的ack；  
+4. TCP_CA_Recovery：快速回复，正在重传丢失的pkt；  
+5. TCP_CA_Loss：超时重传，触发RTO进入，synack超时重传也会进入；  
+
 ### Keepalive
 收到syn ack后，或者收到三次握手最后一个ack，会判断是否设置了SOCK_KEEPOPEN这个标记，来启动keepalive定时器；  
 定时器超时时间看用户有没有通过setsockopt的TCP_KEEPIDLE来设置时间间隔，默认是sysctl的tcp_keepalive_time，120分钟；  

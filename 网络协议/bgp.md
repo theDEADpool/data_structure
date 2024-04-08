@@ -1,5 +1,4 @@
 # BGP
-
 不计算路由，只是传递路由信息；路由信息的来源可以是静态配置、可以是动态计算得到比如ospf。
 用于大型网络，可以通告自治区域内的路由信息，也可以通告不同自治区域之间的路由信息。
 
@@ -93,7 +92,6 @@ BGP支持根据现有路由生成聚合路由Aggregation；
 4. 当一台路由器从自己的IBGP邻居学习到一条BGP路由时，它不能使用该路由或将该路由发布给EBGP的邻居，除非又从其他途径（Ospf、静态路由等）学习到这条路由。该原则也被称为BGP同步原则，该原则是为了解决路由黑洞；
 5. 为了解决原则3导致的IBGP路由无法再IBGP内部通告，IBGP内部无法互通的情况。可以让相同AS内的路由器实现全互联。但这种方式会带来AS内部负载开销变大；
 
-路由反射器
 ## 路由属性（Update报文中Path attributes）
 ### 必须要携带
 1. Origin:表示该路由的来源（IGP[network注入]、EGP[EGP学习到]、Incomplete[import route注入]，优先级从前到后）；
@@ -122,3 +120,39 @@ d.No_Export_Subconfed(0xFFFFFF03):该属性路由不会向AS外发送，也不�
 MED只影响去到同一个AS不同路由的优先级，不影响去往不同AS路由的优先级；  
 Cluster-List
 Originator-ID
+
+## 路由选择策略
+当到达同一目的地存在多条路由时，BGP依次对比下列属性来选择路由：  
+1. 优选协议首选值（PrefVal）最高的路由。  
+协议首选值（PrefVal）是华为设备的特有属性，该属性仅在本地有效。    
+2. 优选本地优先级（Local_Pref）最高的路由。  
+如果路由没有本地优先级，BGP选路时将该路由按缺省的本地优先级100来处理。  
+3. 依次优选手动聚合路由、自动聚合路由、network命令引入的路由、import-route命令引入的路由、从对等体学习的路由。  
+4. 优选AS路径（AS_Path）最短的路由。  
+5. 依次优选Origin类型为IGP、EGP、Incomplete的路由。  
+6. 对于来自同一AS的路由，优选MED值最低的路由。  
+7. 依次优选EBGP路由、IBGP路由、LocalCross路由、RemoteCross路由。  
+PE上某个VPN实例的VPNv4路由的ERT匹配其他VPN实例的IRT后复制到该VPN实例，称为LocalCross；从远端PE学习到的VPNv4路由的ERT匹配某个VPN实例的IRT后复制到该VPN实例，称为RemoteCross。  
+8. 优选到BGP下一跳IGP度量值（metric）最小的路由。  
+9. 优选Cluster_List最短的路由。  
+10. 优选Router ID最小的设备发布的路由。  
+11. 优选从具有最小IP Address的对等体学来的路由。  
+
+## 路由反射器
+为了减少区域内路由器之间的邻居关系，只需要与RR（路由反射器）建立邻居关系，通过RR完成区域内路由信息的交换；  
+### 基本概念
+路由反射器RR（Route Reflector）：允许把从IBGP对等体学到的路由反射到其他IBGP对等体的BGP设备，类似OSPF网络中的DR；  
+客户机（Client）：与RR形成反射邻居关系的IBGP设备。在AS内部客户机只需要与RR直连；  
+非客户机（Non-Client）：既不是RR也不是客户机的IBGP设备。在AS内部非客户机与RR之间，以及所有的非客户机之间仍然必须建立全连接关系；  
+始发者（Originator）：在AS内部始发路由的设备。Originator_ID属性用于防止集群内产生路由环路；  
+集群（Cluster）：路由反射器及其客户机的集合。Cluster_List属性用于防止集群间产生路由环路；  
+
+1. 从非客户机学到的路由，发布给所有客户机；  
+2. 从客户机学到的路由，发布给所有非客户机和客户机（发起此路由的客户机除外）；  
+3. 从EBGP对等体学到的路由，发布给所有的非客户机和客户机； 
+
+### Cluster list
+路由反射器和它的客户机组成一个集群（Cluster），使用AS内唯一的Cluster ID作为标识。为了防止集群间产生路由环路，路由反射器使用Cluster_List属性，记录路由经过的所有集群的Cluster ID；  
+
+当一条路由第一次被RR反射的时候，RR会把本地Cluster ID添加到Cluster List的前面。如果没有Cluster_List属性，RR就创建一个；  
+当RR接收到一条更新路由时，RR会检查Cluster List。如果Cluster List中已经有本地Cluster ID，丢弃该路由；如果没有本地Cluster ID，将其加入Cluster List，然后反射该更新路由；  
