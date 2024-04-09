@@ -188,3 +188,8 @@ cpu相关的优化-- 同核唤醒，绑定在同一个网卡队列的xsk的在�
 nginx master 创建udp 和 对应 xsk，work会fork，相当于xsk有2次应用计数。
 因此关闭的时候master要关 work也要关。
 支持reload 和 upgrade。
+
+nginx每个work自己创建和管理一个xsk，用于发数据，同时通过master listen的udp socket收数据；  
+一个xsk对应umem两个ring和tx rx两个ring，将原生走udp sock发包的逻辑改为走xsk发包；  
+由于设置了need wakeup的flag，用户态写完数据之后需要调用sendto(xsk, NULL, ...)触发内核去消费xsk tx ring上的数据；  
+如果发送阻塞，需要将epoll添加写事件的fd替换成xsk的fd和写回调函数；  

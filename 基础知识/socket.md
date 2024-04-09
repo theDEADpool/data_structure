@@ -1,17 +1,19 @@
-1、int socket(int family, int type, int protocol);
-family：协议族，AF_INET(ipv4)、AF_INET6(ipv6)、AF_LOCAL
-type：SOCK_STREAM(TCP)、SOCK_DGRAM(UDP)、SOCK_RAW(ping)
-protocol：IPPROTO_TCP、IPPROTO_UDP等
-函数成功时，返回非负的fd，错误返回-1。
-创建socket的时候type字段设置SOCK_NONBLOCK，就可以创建非阻塞的socket。
-除了创建和下面accept阶段设置非阻塞，还可以通过fcntl和ioctl来设置socket为非阻塞模式。
+# socket
+## api
+1. int socket(int family, int type, int protocol);  
+family：协议族，AF_INET(ipv4)、AF_INET6(ipv6)、AF_LOCAL  
+type：SOCK_STREAM(TCP)、SOCK_DGRAM(UDP)、SOCK_RAW(ping)  
+protocol：IPPROTO_TCP、IPPROTO_UDP等  
+函数成功时，返回非负的fd，错误返回-1。  
+创建socket的时候type字段设置SOCK_NONBLOCK，就可以创建非阻塞的socket。  
+除了创建和下面accept阶段设置非阻塞，还可以通过fcntl和ioctl来设置socket为非阻塞模式。  
 
-2、int bind(int fd, const struct sockaddr* address, socklen_t address_len);
-address：包含要绑定的地址和端口号。
-address_len：address结构体的大小。
-服务器需要调用bind，客户端可以调用bind也可以不调用。
-不用bind的时候系统会自动分配一个未占用的端口。
-函数成功返回0，错误返回-1。
+2. int bind(int fd, const struct sockaddr* address, socklen_t address_len);  
+address：包含要绑定的地址和端口号。  
+address_len：address结构体的大小。  
+服务器需要调用bind，客户端可以调用bind也可以不调用。  
+不用bind的时候系统会自动分配一个未占用的端口。  
+函数成功返回0，错误返回-1。  
 
 3、int listen(int fd, int backlog);
 backlog：由于TCP连接是需要三次握手的，那么在服务器上有可能存在还在握手过程中的连接，或者是刚刚握手完成但应用程序还没有来得及处理的连接。
@@ -57,23 +59,23 @@ sszie_t sendmsg(int fd, struct msghdr *msg, int flags);
 函数成功则为发送或接收的字节数，若出错为-1。
 这两个接口是对其他发送和接收接口的整体封装。
 
-socket选项
-1、SO_REUSEADDR
-1)设置之后，除非绑定完全相同的ip和port，其他情况多个socket都可以绑定成功。
+## 选项
+1.SO_REUSEADDR  
+a. 设置之后，除非绑定完全相同的ip和port，其他情况多个socket都可以绑定成功。
 比如，一般情况下如果socket1绑定了0.0.0.0:80，那么socket2是无法绑定1.1.1.1:80。但如果设置了该选项，socket2就可以绑定成功。
-2)设置该选项之后，TIME_WAIT状态socket绑定的ip和port可以被其他socket绑定成功。
+b. 设置该选项之后，TIME_WAIT状态socket绑定的ip和port可以被其他socket绑定成功。
 
-2、SO_REUSEPORT
-设置之后，允许任意多的socket绑定完全相同的ip和port。但必须是每个socket都设置了该选项。
-如果socket1没有设置该选项绑定了1.1.1.1:80，那么后续其他socket即使设置了该选项也无法绑定1.1.1.1:80。
+2. SO_REUSEPORT    
+设置之后，允许任意多的socket绑定完全相同的ip和port。但必须是每个socket都设置了该选项。  
+如果socket1没有设置该选项绑定了1.1.1.1:80，那么后续其他socket即使设置了该选项也无法绑定1.1.1.1:80。  
 
-3、SO_RCVBUF和SO_SNDBUF
-用来设置socket接收缓冲区和发送缓冲区大小的。
+3. SO_RCVBUF和SO_SNDBUF   
+用来设置socket接收缓冲区和发送缓冲区大小的。  
 
-4、SO_SNDLOWAT和SO_RCVLOWAT
-设置socket发送缓冲区和接收缓冲区的低水位。以接收缓冲区为例，缓冲区内数据大小没有超过低水位时，不通知上层应用来读取数据。只有超过低水位之后，才通知上层应用。
+4. SO_SNDLOWAT和SO_RCVLOWAT    
+设置socket发送缓冲区和接收缓冲区的低水位。以接收缓冲区为例，缓冲区内数据大小没有超过低水位时，不通知上层应用来读取数据。只有超过低水位之后，才通知上层应用。  
 
-5、SO_KEEPALIVE
+5. SO_KEEPALIVE  
 对于TCP的socket，如果2小时内双方都没有任何的数据传输，TCP就自动给对端发送一个存活探测报文，对端必须相应。
 1)如果对端响应，那么就继续等待，如果再过2个小时还是没有数据传输，则再发一个存活探测报文。
 2)如果对端响应RST，表示对端程序崩溃之后再次启动，socket被关闭。
@@ -83,7 +85,7 @@ TCP_KEEPINTVL设置两次探测之间的间隔。
 TCP_KEEPCNT设置探测次数。
 keepalive如果超时，会触发epoll事件可读，recv返回-1。错误码为ECONNRESET和ENETRESET。
 
-6、SO_LINGER
+6. SO_LINGER  
 有两个参数l_onoff和l_linger。
 l_onoff为0则表示该选项关闭。
 l_onoff为1，l_linger为0，当关闭socket的时候，socket直接丢弃发送缓冲区内所有数据，并发送一个RST给对端。不走正常的四次挥手断链，避免了TIME_WAIT状态。

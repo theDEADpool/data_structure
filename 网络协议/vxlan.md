@@ -8,12 +8,6 @@ VLAN只有4096个租户，VXLAN可以有1600w的租户；
 mac in UDP,把二层网络报重新封装在一个udp包里；
 [outhdr](ethhdr|iphdr|udphdr)vxlanId[Innerhdr](ethdhr|...)
 
-网络架构
-vm -- vtep -vxlan隧道- vtep --vm
-如果vni和bd相同，说明在一个二层网关体系内；
-如果vin和bd不同，则需要三层网关；
-
-
 VXLAN术语
 1. VTEP  
 VXLAN Tunnel EndPoint。VTEP负责VXLAN报文的封装与解封装，包括ARP请求报文和正常的VXLAN数据报文；  
@@ -41,7 +35,7 @@ Outer Ethernet Header：14个字节，目的MAC是对端VTEP的MAC或者是网�
 
 ## 报文进入vxlan隧道
 同一个大二层的vtep设备两两之间都需要建立vxlan隧道；
-如何划分一个大二层区域
+如何划分一个大二层区域?  
 bridge domain，简称BD，表示一个大二层广播域；每一个BD需要一个与之对应的vni；
 
 首先要回答一个问题，哪些报文需要进入vxlan隧道？  
@@ -91,11 +85,12 @@ vxlan三层网关，用于不同子网或与外部网络通信；
 ## 参考
 https://support.huawei.com/enterprise/zh/doc/EDOC1100087027#ZH-CN_TOPIC_0254803605
 
+## EVPN
+最初的vxlan没有控制面，依赖于手工配置和流量泛洪来学习主机地址，导致流量浪费；  
+通过EVPN可实现VTEP自动发现、VXLAN隧道自动建立，从而降低网络部署、扩展的难度；  
+EVPN可以同时发布二层MAC和三层路由信息，可以减少网络中泛洪流量；  
 
-vxlan报文转发时候如何知道对端的ip和mac？
-通过泛洪机制，vtep会有自己的转发表，当vtep发现目标ip的mac地址本地没有的时候，会把报文泛洪给其他所有的vtep，目标vtep相应之后，源vtep就会学习到mac、vni和vtep的映射关系，并加入转发表；
-
-EVPN利用MP-BGP的机制，新增了EVPN地址族和EVPN NLRI，定义了五种新的路由类型：  
+传统的BPG-4只能管理ipv4单播路由，通过对NLRI的扩展，衍生出MP-MGP。NLRI扩展了多个新的地址族，比如ipv4、vpn等，EVPN就是在L2VPN地址族下扩展了一个子地址族evpn，定义了五种新的路由类型：  
 Type1 Ethernet auto-discovery (AD) route，以太自动发现路由  
 Type2 MAC/IP advertisement route，MAC/IP路由  
 Type3 Inclusive multicast Ethernet tag route，Inclusive Multicast路由  
@@ -135,20 +130,56 @@ MAC/IP路由可以同时携带主机MAC地址+主机IP地址，因此该路由�
 4. ND表项扩散  
 Type2路由可以同时携带主机MAC地址+主机IPv6地址，因此该路由可以用来在VTEP之间传递ND表项，实现ND表项扩散，可用于实现NS组播抑制、防止ND欺骗攻击、分布式网关场景下的IPv6虚拟机迁移。  
 5. 通告主机IPv6路由  
-在分布式网关场景中，要实现跨子网IPv6主机的三层互访，网关设备需要互相学习主机IPv6路由。作为BGP EVPN对等体的VTEP之间通过交换Type2路由，可以相互通告已经获取到的主机IPv6路由。  
+在分布式网关场景中，要实现跨子网IPv6主机的三层互访，网关设备需要互相学习主机IPv6路由。作为BGP EVPN对等体的VTEP之间通过交换Type2路由，可以相互通告已经获取到的主机IPv6路由。
+
+### Type3路由
+主要用于在VTEP之间相互通告二层VNI、VTEP IP信息，以建立头端复制列表，即用于VTEP的自动发现和VXLAN隧道的动态建立。如果对端VTEP IP地址是三层路由可达的，则建立一条到对端的VXLAN隧道。同时，如果对端VNI与本端相同，则创建一个头端复制表，用于后续BUM报文转发；  
+路由字段：
+1. Route distinguisher：EVPN实例下配置的RD值；  
+2. Ether Tag ID：当前设备的vlan id，为全0；  
+3. IP address length：vtep设备ip长度；  
+4. origin route ip address：vtep设备ip；  
+5. flags：vxlan场景没用；  
+6. Tunnel type：隧道类型，vxlan场景是6，头端复制，用于BUM报文转发；  
+7. MPLS label：二层vni信息；  
+8. Tunnel identifier：vxlan场景也是本端vtep的ip；   
+
+### Type5路由
+IP前缀路由，主要用于传递网段路由。不同于Type2路由只传递32（IPv4）/128（IPv6）位的主机路由，Type5路由可传递0～32/0～128掩码长度的网段路由，也可以传递主机路由；  
+当携带主机IP地址时，主要用于分布式网关场景中的主机/网段路由通告；当携带网段地址时，通过传递该类型路由，可以实现VXLAN网络中的主机访问外部网络；   
 
 ## BGP EVPN的工作过程
 ### EVPN学习MAC地址
-通过type2路由
+host1 -- vtep1 --vxlan tunnel-- vtep2 -- host2  
+1. host1连接至vtep1时会触发arp、dhcp等行为，vtep1就能学习到host1的mac地址，记录在mac表中；  
+2. 然后vtep1向vtep2（两者是BGP邻居关系）发送type2路由，通告本端的vtep ip、host1的mac地址、vni、RT值等信息；  
+3. vtep2根据RT值与本端RT进行比较选择是否接纳路由，两者相同则接纳，vtep2会建立对应关系，下一跳是vtep1的ip对应host1的mac地址；  
+4. 同理vtep1也可以学习到host2的mac地址；  
+### 建立EVPN头端复制表和vxlan隧道
+1. vtep之间通过type3路由建立头端复制表，会携带vni、本端vtep ip、RD、出方向vpn-target等信息； 
+2. vtep2收到该路由后，如果vtep1 ip三层可达，则建立vxlan隧道，如果vni相同，则建立头端复制表，用于后续广播、组播、未知单播报文的转发；   
+### 发布主机路由
+1. 主机路由可以指导分布式网关场景下vtep设备进行三层转发，即一台vtep设备通告其他设备，本端由哪些主机路由信息，其他设备才知道哪些报文要发送给该vtep设备。这一部分是通过type2路由完成的；  
+2. 其他vtep设备收到该路由后，会记录该vtep设备的主机ip信息到路由表，下一跳为该vtep设备ip；  
+### 发布网段路由
+1.通过type5路由发布，如果vtep设备是某一网络中的唯一网关，就可以发布该路由信息；  
 
-vtep的发现机制BGP EVPN  
-EVPN Type 2：MAC/IP路由。通过Type-2路由将主机MAC/IP信息传递至远端VTEP。  
-EVPN Type 3：Inclusive Multicast路由。该类路由在VXLAN控制平面中用于VTEP的自动发现和VXLAN隧道的动态建立。作为BGP EVPN的对等体的VTEP，通过Inclusive Multicast路由互相传递二层VNI和VTEP IP地址信息。其中，【Originating Router IP Address】字段为本端VTEP IP。如果对端VTEP IP是三层路由可达，则建立一条VXLAN隧道。  
-EVPN Type 5：IP prefix。有一种场景会用到Type-5，即Underlay与Overlay互通的场景。通过Type-5来传递IP前缀路由。当外部路由进入Border后，Border会通过Type-5类路由同步到VXLAN网络里面，从而实现VXLAN网络中的主机可以访问外部网络。  
+## vxlan流量转发
+### 同子网单播报文转发
+1. host1向host2发送报文，原始报文src ip=host1 ip，dst ip = host2 ip，src mac = host1 mac，dst mac = host2 mac；   
+2. 报文到vtep1后，封装udp头部src ip = vtep1 ip，dst ip = vtep2 ip，src mac = vtep1 mac，dst mac = nexthop mac（也可能是vtep2 mac）；根据报文入接口或vlan信息判断其所属BD，通过BD找到vxlan隧道接口；  
+3. vtep2收到报文会取出vxlan的udp头部，根据原始报文dst mac在本地mac表中到对应出接口转发给host2；  
 
-BPG EVPN可以做些什么？
-通过MP-BGP宣告主机MAC/IP
-通过MP-BGP实现VTEP Peer 自动发现和认证
-分布式网关
-ARP 抑制
-头端自动发现的入站复制
+### 同子网BUM报文转发
+1. 如果是发送广播、组播、未知单播，会向子网内所有vtep设备发送；  
+2. vtep设备收到报文后会找到该BD内所有vxlan隧道接口进行报文转发；  
+
+## vxlan ARP抑制方法
+1. ARP广播变单播   
+还是上面的网络，vtep2收到host2的ARP报文后可以学习到host2的mac，同时生产ARP广播抑制表通过evpn向vtep1发布；  
+当host1首次请求host2时，发送ARP广播请求host2的mac，vtep1收到请求后查询本地的抑制表，将ARP请求报文的dst mac从广播替换成host2的mac，然后再将ARP转发给vtep2-host2；  
+
+2. ARP二层代答   
+a. vtep2上开启ARP二层代答功能后，vtep2会侦听主机发送的ARP报文；  
+b. 当2接收到Host2的ARP报文后，可以根据ARP生成相应的ARP广播抑制表项，并通过EVPN向vtep1发布，这样vtep1也可以学习到Host2的主机信息；  
+c. Host1初次访问Host2，发送ARP广播请求来获取Host2的MAC地址；vtep1收到ARP广播请求后，查询ARP广播抑制表，因为已经有Host2的主机信息，所以vtep1直接对ARP请求进行代答；  
