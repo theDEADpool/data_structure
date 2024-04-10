@@ -40,13 +40,17 @@ SR-TE支持四种引流策略：
 
 如果转发要跨越两个SR-TE区域，SR-TE1和SR-TE2之间没有node id，需要用到BGP SR技术在两个区域之间分配sid，可以是邻接sid，也可以是邻居sid，也可以是为一组邻居分配sid；但如果转发路径很长，sid的列表也很长，浪费空间大；就可以通过bind sid解决，binding sid可以直接分配个SR-TE2这个区域，这样标签就缩短为SR-TE1内部node标签 + BGP ISD + binding SID;  
 
-SRV6   
+运营商骨干网路由器P
+运营商边缘路由器PE
+用户边缘路由器CE
+
+# SRv6   
 区别于MPLS-RS是在ip报文之外再加上标签，SRV6是复用了ipv6的扩展头部，在里面加上了SR header信息，这样除了TOR路由器，其他设备只要支持IPv6都可以进行转发；  
 SR header
 两个关键信息segment list + segment left， segment left是一个id指向segment list中当前活跃的成员；  
 整个数据包的dst ipv6 = segment list[segment left];   
 segment list是128位的ipv6地址，第一个可编程特性就体现在segment list的顺序上，可以自定segment list的顺序，按照不同的路径进行传输；  
-每个segment list成员包括locator function和argument 三个部分，locator携带位置信息，function指定报文转发的指令，argument可选；  
+每个segment list成员包括locator、function和argument 三个部分，locator携带位置信息，function指定报文转发的指令，argument可选；  
 第二个可编程特性体现在function的内容上，function根据不同的sid类型，可以指定不同的动作：  
 1. End，代表一个node，对应的动作是处理SHR更新ipv6地址，然后查找路由表进行转发；  
 2. End.X 代表网络中的一个邻接，对应指定是处理SRH更新ipv6地址，从SID制定的出接口转发；  
@@ -54,23 +58,80 @@ segment list是128位的ipv6地址，第一个可编程特性就体现在segment
 4. End.DT4：PE类型的SID，主要用在IPv4 L3VPN场景，对应指令是解封装报文，取出SRH和IPv6头部，根据宝文理的目的地址，查找ipv4 VPN实例进行转发；  
 5. End.DT6：主要用在IPv6 L3VPN场景，作用和上面类似；  
 
-运营商骨干网路由器P
-运营商边缘路由器PE
-用户边缘路由器CE
+## 转发流程
+host1 - A - B - C（无srv6能力） - D - E - host2
+1. 源节点A将SRv6路径信息封装在SRH中，指定B-C，C-D链路的SID，另外封装E点发布的SID A5::10（此SID对应于节点E的一个IPv4 VPN），共3个SID，按照逆序形式压入SID序列。此时SL（Segment Left）=2，将Segment List[2]值复制到目的地址DA字段，按照最长匹配原则查找IPv6路由表，将其转发到节点B;  
+2. 报文到达节点B，B节点查找本地SID表（存储本节点生成的SRv6 SID信息）,命中自身的SID（End.X SID），执行SID对应的指令动作。SL值减1，并将Segment List[1]值复制到DA字段，同时将报文从SID绑定的链路（B-C）发送出去;  
+3. 报文到达节点C，C无SRv6能力，无法识别SRH，按照正常IPv6报文处理流程，按照最长匹配原则查找IPv6路由表，将其转发到当前目的地址所代表的节点D;  
+4. 节点D收报文后根据目的地址A4::45查找本地SID表，命中自身的SID（End.X SID）。同节点B，SL值减1，将A5::10作为DA，并将报文发送出去;  
+5. 节点E收到报文后根据A5::10查找本地SID表，命中自身SID（End.DT4 SID），执行对应的指令动作，解封装报文，去除IPv6报文头，并将内层IPv4报文在SID绑定的VPN实例的IPv4路由表中进程查表转发，最终将报文发送给主机2;   
 
-SRv6故障保护TI-LFA FRR方案  
+## 工作模式
+### SRv6 BE
+基于IGP最短路径算法计算得到最优SRv6路径，仅使用一个业务SID来指引报文在链路中的转发。即不能控制报文在网络中具体的转发路径，没有流量工程能力；  
+
+### SRv6 TE policy
+#### 层级结构
+1. 第一级三个要素：
+a. 头端headend：在某个节点配置SRv6 TE policy，该节点就属于headend；  
+b. 尾端endpoint：相当于SRv6 TE policy的目的地址；  
+c. color：标识SRv6 TE policy的特点，比如低时延，比如大带宽；路由也可以配置color属性，在使用中，路由的color需要与SRv6 TE policy相一致；  
+2. 第二级candidate path，一个SRv6 TE policy可以拥有多个candidate path，只有优先级最高的才能成为主路径；
+3. 第三级segment list，每个candidate path包含segment list形成真正的转发路径。segment list可以通过携带weight（权重）来实现负载分担；  
+每个policy可以配置一个binding SID，提供给其他policy使用，形成一个组合路径，这种在跨域场景很常用到；  
+
+利用Segment Routing的源路由机制，通过在头节点封装一个有序的指令列表（路径信息）来指导报文穿越网络；  
+控制器通过PE路由器上报的网络拓扑信息，计算路径信息并下发给网络头结点；  
+头节点根据经信息生产SRv6 policy，指定路径每一跳的SID和对应的action并以此转发报文；  
+路径上每个节点匹配SID后执行对应的action，最终完成报文转发；  
+
+#### 路径计算
+支持三种路径计算方法：
+1. 根据亲和属性动态计算路径  
+a. 根据亲和属性规则过滤出可以使用的链路；  
+a1. 包括亲和规则、亲和属性和链路属性，采用位运算方式；  
+a2. 亲和规则为include-any，即链路属性包含亲和属性中的任意一种即认为该链路可用；  
+a3. 亲和规则为include-all，即链路属性需要包含所有亲和属性才认为可用；  
+a4. 亲和规则为exclude-any，即链路属性包含亲和属性中任意一个则认为该路径不可用；  
+b. 根据度量来计算路径，支持的度量方式有以下几种：  
+b1. 以跳数作为度量值，选择跳数最少的链路；  
+b2. 以IGP链路开销值作为度量值，选择IGP链路开销值最低的链路；  
+b3. 以接口平均时延作为度量值，选择接口平均时延最低的链路；  
+b4. 以MPLS TE度量值作为度量值，选择TE度量值最低的链路；   
+
+2. 根据Flex-Algo算法动态计算路径   
+
+3. 使用PCE动态计算路径   
+SRv6节点可以作为路径计算的客户端PCC，通过路径计算单元PCE来进行路径计算；  
+PCE分为无状态PCE和有状态PCE，无状态PCE仅提供路径计算服务，有状态PCE会掌握所有PCC维护的路径信息来计算和优化路径；  
+
+#### 保护策略
+1. TI-LFA方案  
+比如路径是A-B-C-D-E，当B和C之间的链路故障，此时B可以选择一条其他的路径比如B-H-C，绕过故障链路进行转发；  
+如果是C节点故障，那TI-LFA就会失效无法绕行；  
+TI-LFA FRR方案
 基本计算过程：  
-1. 计算扩展P空间，以保护链路源端所有邻居为根节点建立SPF树，是所有从根节点不经过保护链路可达的节点集合；  
-2. 计算Q空间，以保护链路目的端为根节点建立SPF树，是所有从根节点不经过保护链路可达的节点集合；  
-3. 寻找PQ空间的交集节点，得到最短路径；  
-4. 计算备份出接口，如果PQ空间没有交际，也没有直连邻居，备份出接口为收敛之后下一跳出接口；  
-5. 计算repair list，由P节点标签 + PQ路径上的邻接标签组成；  
+a. 计算扩展P空间，以保护链路源端所有邻居为根节点建立SPF树，是所有从根节点不经过保护链路可达的节点集合；  
+b. 计算Q空间，以保护链路目的端为根节点建立SPF树，是所有从根节点不经过保护链路可达的节点集合；  
+c. 寻找PQ空间的交集节点，得到最短路径；    
+d. 计算备份出接口，如果PQ空间没有交际，也没有直连邻居，备份出接口为收敛之后下一跳出接口；  
+e. 计算repair list，由P节点标签 + PQ路径上的邻接标签组成；  
+2. 中间节点保护  
+某个EndPoint节点故障，TI-LFA无法生效的情况下，可以由前序节点跳过该故障点，要执行的转发行为包括SL减1，将故障点下个节点的SID拷贝到外层IPv6头；  
+3. Hot-standby保护  
+通过备份的candidate path保护主candidate path，需要配合SBFD和单臂BFD的监测；  
+4. VPN-FRR保护  
+通过一个policy保护另一个policy；  
+5. SRv6-BE逃生保护  
+即从SRv6-TE切换到SRv6 BE模式，使用IGP计算的最短路由进行转发，但无法保证业务的SLA需求；  
 
-EndPoint节点故障保护  
-EndPoint节点处理SRv6报文，要执行的转发行为包括SL减1，并并将下个节点的SID拷贝到外层IPv6头；如果EndPoint节点故障的时候，它无法完成报文处理。因此需要其上游节点代替完成，代替完成的节点成为Proxy forwarding节点。  
-举个例子1 2 3 4，当3出现故障，2感知到后执行proxy forwarding行为，segment left--，ipv6 dst 改为4；
-如果2有到4且不经过3的路由，则proxy forwarding成功；  
-如果没有，则只能依赖TI-LFA计算一条不经过3的备份路径；  
+policy两种下发策略
+1. 控制器下发  
+需要控制器与转发器之间建立BGP-LS邻居，控制器收集带宽、时延等网络信息，完成路径计算后下发给头节点，头节点通过BGP update报文生成SRv6 TE policy；  
+2. 静态配置  
+
+#### 参考资料
+https://www.h3c.com/cn/Service/Document_Software/Document_Center/Home/Routers/00-Public/Learn_Technologies/White_Paper/SRv6_TE_Policy-6930/#_Toc118215814
 
 尾节点保护
 

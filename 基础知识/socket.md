@@ -100,7 +100,7 @@ l_onoff为1，l_linger为1，如果socket发送缓冲区内有数据，则等待
 9、TCP_CORK
 启动CORK算法。
 
-socket操作常见错误errno
+## socket操作常见错误errno
 EAGAIN，对于非阻塞socket不算错误，可以再次调用socket接口。
 在ET触发模式下，出现EAGAIN就是读数据结束了，不能继续调用recv接口。在LT触发模式下可以继续调用send和recv。
 EINTER，被系统调用中断，connect在这个错误码之后不能再次调用connect。只需要重新设置epoll事件就可以了。其他的socket接口可以再次调用。
@@ -109,3 +109,13 @@ EINPROGRESS，连接进行中，可以通过epoll事件来判断是否完成。
 ETIMEOUT，发生了读超时或者写超时。
 ECONNREFUSED，连接拒绝，一般发生在建连过程。
 EINVAL，提供的参数非法。或者socket状态不对，比如没有listen就accept。
+
+## TSO\GSO\GRO\LRO
+1. TSO  
+TCP大包分片，将tcp层的分片卸载到网卡执行，需要网卡支持；  
+2. GSO  
+通用包分片，不需要网卡支持，将分片动作延迟到网卡驱动执行；  
+3. GRO  
+通用组包，不需要网卡支持，将组包动作交给网卡驱动执行；  
+4. LRO
+网卡组包，需要网卡支持，网卡将收到的包合并成大包之后再传递给协议栈；  

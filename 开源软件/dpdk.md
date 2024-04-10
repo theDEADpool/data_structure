@@ -10,10 +10,12 @@ TLB表只有一个，位于CPU的高速缓存中，CPU需要知道当前TLB表�
 2. 减少页表开销，减轻TLB压力；所有进程共享一个大页内存表，而大页内存能有效的减少虚拟地址与物理地址之间映射关系的表项，增加TLB的命中率；  
 大页一般是2M或1G；  
 ### 如何激活大页
+设置大页个数 echo 256 > /sys/kernel/mm/hugepages/hugepages-2048kb/nr_hugepages  
+挂载大页 mkdir /mnt/huge; mount -t hugelbfs nodev /mnt/huge  
 开启hugetlbfs、default_hugepagesz=1G hugepagesz=1G hugepage=4  
 对numa系统，申请的大页会平均分给每个numa node，比如有2个node，要4G大页，就是每个node 2G；  
 DPDK应用程序从/sys/kernel/mm/hugepage/和/proc/mounts等目录或文件中获取系统的所有大页资源信息，通过mmap给大页建立虚拟地址和物理地址的映射；  
-rte_eal_hugepage_init初始化
+rte_eal_hugepage_init初始化  
 
 ## cache一致性
 数据读从内存-cache-处理器，数据写处理器-cache-内存；  
@@ -34,15 +36,16 @@ eal_cpu_socket_id用来扫描/sys目录下文件，确定当前逻辑核所在�
 
 ## 如何使用DPDK进行数据包的收发处理？
 收包  
-网卡通过DMA把数据写入收包队列，两个环形队列一个rx_ring一个是sw_ring，rx_ring存储报文的物理地址，提供DMA使用；sw_ring存储其对应的虚拟地址，提供应用使用；
-rte_rx_queue_setup会创建rx_ring和sw_ring;  
-rx_ring里面的每个描述符中的地址填的是rte_mbuf的buf data地址，而sw_ring的每个描述符存放的是rte_mbuf的地址，DMA把数据写入rx_ring中实际上就是将数据填充到了mbuf的data部分；rx_ring和sw_ring通过rte_eth_dev_start建立映射关系；   
-每次收到新数据，会检查rx_ring当前的buf DD位是否为0，为0表示buf可用，把数据填入后DD改为1。如果发现DD为1，说明网卡队列已满，丢弃报文；  
-应用通过rte_eth_rx_burst从指定的网卡和指定的队列中读取数据。从队列尾部开始读，将数据写入mbuf，并把队列buf的DD位置0；  
+网卡通过DMA把数据写入收包队列ixgbe_rx_queue，该队列包含两个环形队列一个rx_ring一个是sw_ring，rx_ring存储报文的物理地址，提供DMA使用；sw_ring存储其对应的虚拟地址，提供应用使用；  
+rx_ring队列的成员类型是ixgbe_adv_rx_desc（即rx_ring中的一个buf），其中pkt_addr是报文数据的物理地址，网卡DMA将报文数据通过该物理地址写入对应的内存空间；hdr_addr是报文的头信息，hdr_addr的最后一个bit为DD位；DD位用来描述一个buf是否可用；  
+每次收到新数据，网卡会检查rx_ring当前的buf DD位是否为0，为0表示buf可用，把数据填入后DD改为1。如果发现DD为1，说明网卡队列已满，丢弃报文；  
+对于应用而言，DD位使用恰恰相反，在读取数据包时，先检查DD位是否为1，如果为1，表示网卡已经把数据包放到了内存中，可以读取，读取完后，再放入一个新的buf并把对应DD位设置为0。如果为0，就表示没有数据包可读；  
 
-发包   
-发送队列初始化，和接收队列类似tx_queue_setup，创建tx_ring和sw_ring，建立mempool、queue、DMA、ring之间的关系
+sw_ring队列成员类型是ixgbe_rx_entry，其中包含mbuf的指针，在队列初始化时候会从队列的mbuf_pool中获取一个mbuf；mbuf中存放报文数据的物理地址给到rx_ring的pkt_addr字段，而mbuf的地址则给到sw_ring成员的mbuf指针。同时设置DD位为0；  
 
+收包包含网卡入队和应用出队两动作，网卡入队是由DMA通过PCI总线将数据写入rx_ring的成员中；应用出队则是通过调用rte_eth_rx_burst（核心是ixgbe_recv_pkts）从sw_ring尾部去读mbuf，读取一个mbuf，则放入一个新的mbuf，当所有报文都被读取后，重新设置队尾tail的位置；  
+
+发包是用户空间调用rte_eth_tx_burst去发包；  
 
 ## 环形队列rte_ring
 无锁环形队列，支持单生产者入队、单消费者出队、多生产者入队、多消费者出队；  
@@ -67,48 +70,46 @@ rx_ring里面的每个描述符中的地址填的是rte_mbuf的buf data地址，
 
 ## 内存池
 可以创建固定大小的内存池，这个就是一块完整的内存：  
-```
-struct rte_mempool * rte_mempool_create(const char           name,             //mempool名字
-    unsigned             n,                 //元素个数
-    unsigned             elt_size,          //元素大小
-    unsigned             cache_size, 
-    unsigned             private_data_size, 
-    rte_mempool_ctor_t   mp_init, 
-    void*                mp_init_arg, 
-    rte_mempool_obj_cb_t obj_init, 
-    void*                obj_init_arg, 
-    int                  socket_id, //在NUMA情况下，socket_id参数是套接字标识符。如果预留区域没有NUMA约束，取值为SOCKET_ID_ANY。
-    unsigned             flags      //单/多生产者，单/多消费者
-    )
-```
 也可以创建mbuf内存池，每块内存前面都有一个struct rte_mbuf的结构，然后是data；  
-```
-struct rte_mempool * rte_pktmbuf_pool_create(const char * 	name,
-        unsigned            n,  
-        unsigned 	        cache_size,
-        uint16_t 	        priv_size,
-        uint16_t 	        data_room_size,
-        int 	        socket_id 
-    )
-```
-内存池中的对象是通过上面说到的环形队列ring来管理的；  
+
+一个内存池包括：rte_mempool结构体+私有结构+对象数组（对象0、1、2、3、4...）；  
+每个对象包括：对象头+data+对象尾；  
+内存池中的对象是通过上面说到的环形队列ring来管理的，实际上是指针，指向的是环形队列ring中的一块块内存；  
+
 mempool不是直接在大页上申请的，而是要依赖memzone，memzone就是一段连续的物理空间，一个mempool可以包含多个memzone。每个mempool有一个local cache数组，数组成员是指向rte_mbuf的指针，数组长度和cpu的核数对等；  
 一个mempool至少需要3个memzone，其中mempool的local cache和头结构占用1个，内存池中的对象占用1个，而管理对象的rte_ring占用一个；  
 local cache本身是由关联的核独占，其指针指向mempool中的对象，而mempool是多核共享的，即从mempool申请内存会由竞争；  
 
 ## mbuf
+dpdk用来存储报文数据的结构，由元信息+data组成，是一块连续的内存，其中元信息描述了报文类型、长度、数据起始地址，rss hash等信息；  
+元信息占用两个cache line，访问最频繁的信息放在第一个cache line中，元数据结构式rte_mbuf，整个mbuf包括：rte_buf + headroom + data + tailroom；  
+headroom可以存储与其他系统交互的一些信息。对于巨型帧一个mbuf放不下（mbuf默认data部分的长度是2K），就会存放在多个mbuf中，然后通过链表的方式将多个mbuf串联起来（rte_mbuf结构中有个pkt_next指针来串联多个mbuf）；  
+使用rte_pktmbuf_pool_create来创建mbuf内存池，rte_pktmbuf_free回收mbuf或mbuf chain；  
+dpdk为了避免报文的拷贝还引入了indirect mbuf的概念，indirect mbuf本身不持有数据，而是通过指针指向某个direct mbuf中的数据，这个过程称为attach；attach之后，direct mbuf的引用计数会+1，deattach时-1，只有当direct mbuf的引用计数为0时，mbuf才可以被释放；  
+
+参考文档：https://blog.csdn.net/qq_20817327/article/details/113871877
 
 ## PMD轮询驱动和uio
+用户态的 PMD 驱动程通过 igb_uio 内核驱动模块向 UIO注册了一个uioX的设备，UIO则会通过sysfs将uioX的设备暴露给用户空间。然后通过mmap将uioX的内存映射到用户空间。这样用户空间就可以直接访问uioX设备的资源了。PMD本身也会注册一些中断处理函数，因为设备依然会有一些中断需要处理，不能够完全屏蔽中断；  
+为了避免小流量场景下轮询空转消耗CPU，DPDK引入了中断轮询模式，即轮询如果发现没有数据处理，则进入睡眠，再收到包时候通过中断激活轮询继续收包； 
 
+系统加载了igb_uio驱动后，每当有网卡与igb_uio驱动绑定，就会在/dev目录下生成一个uio文件，比如/dev/uio1,2,3这样。uio设备是一个接口层，将网卡的内存空间和io暴露给了应用层，应用层通过mmap的方式将物理内存映射成虚拟内存，访问这个虚拟内存，就相当于是访问网卡设备；  
+由用户态的pmd驱动 + 内核igb_uio驱动 + 内核uio框架三者，实现了bypass内核，用户态轮询直接从网卡接收报文的能力；  
+
+dpdk在igb_uio驱动上实现了小部分的硬件中断，如统计中断次数，然后通过唤醒应用层注册到epoll中的/dev/uioX的中断，由应用层来完成大部分的中断处理；  
+需要说明的是，dpdk用户态处理的是控制类中断，不会处理'收到报文'这类数据中断（原本PMD的作用就是为了减少中断）；具体来说PMD驱动通过igb_intr_enable来设置中断掩码，只指定了网卡状态改变的中断掩码，没有指定接收、发送报文的中断掩码；  
+
+参考资料：https://blog.csdn.net/qq_20817327/article/details/106449737
 
 ## 多队列
+DPDK天然支持多队列  
 以run to completion模型为例
 rte_eth_tx_queue_setup可以建立网卡、队列与cpu核数之间的对应关系；  
 将网卡的某个接收队列分配给某个核，从该队列中收到的所有报文都应当在该指定的核上处理结束。  
 从核对应的本地存储中分配内存池，接收报文和对应的报文描述符都位于该内存池。  
 为每个核分配一个单独的发送队列，发送报文和对应的报文描述符都位于该核和发送队列对应的本地内存池中。  
 
-## 负载均衡
+## 负载均衡（包如何分配到某个队列）
 1. 包类型
 mbuf中有packet_type字段标识包的类型，包括二层、三层、四层，tunnel的类型；  
 2. RSS  
@@ -127,7 +128,20 @@ linux内核提供的CPU亲和，针对某个线程，将线程与某个cpu绑定
 lcore初始化过程：
 1. rte_eal_cpu_init，获取系统当前cpu信息；  
 2. eal_parse_args，确定哪些cpu可用并设置master cpu；  
-3. 
+
+## QoS
+参考资料：https://sdn.0voice.com/?id=894
+DPDK的QoS是将一件复杂的事情分成不同的处理阶段，比如收包处理过程可以分为：
+1. pkt I/O和pkt parse；  
+2. 流分类、负载均衡，将pkt对应到一个具体的流；  
+3. 对pkt执行不同的业务逻辑；  
+4. 根据算法调度将报文转发、丢弃等；  
+QoS主要集中在第4步，即根据算法进行流量监督和流量整形。包含三个部分：
+1. 测速标记：流量监督，DPDK提供了单速三色标记和双速三色标记，会给每个包打上红绿黄三种颜色之一；  
+a. 两种算法都是基于令牌桶机制，参考资料：https://blog.csdn.net/maotianwang/article/details/41310957  
+b. DPDK提供了一个测速标记API来给包标记颜色，标记颜色的时候可以参考之前标记过的颜色（非色盲模式）决定当前要标记的颜色，也可以不关心之前的颜色，只标记当前的颜色；  
+2. 拥塞避免，RED算法（早期随机丢弃），即拥塞发生前随机丢掉一些包，设定了两个阈值，小于两个阈值不丢包；两个阈值之间随机丢包；大于两个阈值尾丢包；  
+3. 拥塞管理，分层调度；  
 
 ## 两种模式
 报文输入-报文预处理-报文分流-ingress队列->调度到某个cpu处理->egress队列->post处理->报文输出；  
@@ -136,4 +150,22 @@ lcore初始化过程：
 ### pipeline
 将一个大功能细分成多个独立的阶段，不同阶段通过队列传递报文，某个CPU单独负责其中某一个阶段的工作；  
 
+## 转发算法
+1. 精确匹配算法；  
+2. 最长前缀匹配；  
+3. ACL算法；  
 
+## 为什么快
+1. PMD轮询减少中断开销；  
+2. 大页内存，减少内存查找开销；  
+3. 将线程与CPU绑定，减少了调度开销；  
+4. 无锁环形队列，更加高效的收发报文；  
+
+## 核心组件
+1. 环境层EAL；  
+2. 堆内存管理malloc lib；  
+3. 环形缓冲区Ring lib；  
+4. 内存池mempool；  
+5. 报文缓存mbuf；  
+6. 定时器timer；  
+其他的比如PMD、报文转发算法、kni内核协议栈重入；  
