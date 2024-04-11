@@ -105,6 +105,25 @@ b4. 以MPLS TE度量值作为度量值，选择TE度量值最低的链路；
 SRv6节点可以作为路径计算的客户端PCC，通过路径计算单元PCE来进行路径计算；  
 PCE分为无状态PCE和有状态PCE，无状态PCE仅提供路径计算服务，有状态PCE会掌握所有PCC维护的路径信息来计算和优化路径；  
 
+#### 控制器下发SRv6 TE policy
+1. 控制器通过BGP-LS收集网络拓扑和SID信息；  
+2. 控制器与源节点之间建立BGP IPv6 SR Policy地址族的BGP会话；  
+3. 控制器计算SRv6 TE Policy候选路径后，通过BGP会话将SRv6 TE Policy的Color属性、Endpoint地址、BSID、候选路径和SID列表下发给源节点。源节点设备生成SRv6 TE Policy；  
+
+为了支持SRv6 TE Policy，MP-BGP定义了新的子地址族BGP SRv6 TE Policy地址族，并新增了SRv6 TE Policy NLRI（Network Layer Reachability Information，网络层可达性信息），即SRv6 TE Policy路由（也称为BGP SRv6 TE Policy路由）。SRv6 TE Policy路由中包含SRv6 TE Policy的相关配置，包括BSID、Color、Endpoint、候选路径优先级、SID列表和SID列表的权重等；  
+SRv6 TE Policy NLRI包含的字段如下：  
+1. NLRI length：1字节，NLRI的长度；  
+2. Distinguisher：4字节，唯一标识一个SRv6 TE Policy；  
+3. policy color：4字节，color属性标识；  
+4. EndPoint：16字节，目的节点地址；  
+
+携带SRv6 TE Policy NLRI的BGP Update消息中，需要同时携带Tunnel Encapsulaton Attribute，包含字段如下：  
+1. Preference Sub-TLV：通告候选路径的优先级；  
+2. SRv6 Binding SID Sub-TLV：通告候选路径的BSID；   
+3. Segment List Sub-TLV：通告Segment List；  
+4. Weight Sub-TLV：通告Segment List的权重；  
+5. Policy Candidate Path Name Sub-TLV：通告候选路径的名称；  
+
 #### 保护策略
 1. TI-LFA方案  
 比如路径是A-B-C-D-E，当B和C之间的链路故障，此时B可以选择一条其他的路径比如B-H-C，绕过故障链路进行转发；  
@@ -124,6 +143,12 @@ e. 计算repair list，由P节点标签 + PQ路径上的邻接标签组成；
 通过一个policy保护另一个policy；  
 5. SRv6-BE逃生保护  
 即从SRv6-TE切换到SRv6 BE模式，使用IGP计算的最短路由进行转发，但无法保证业务的SLA需求；  
+4. 防微环  
+微环的产生，是当网络中出现故障，各节点路径收敛顺序不一致出现的一种暂时性环路；  
+a. 正切微防环：感知到故障的节点维持TI-LFA计算的备份路径转发一段时间，等待网络上其他节点完成新的路径收敛之后，其自身再更新路径；  
+b. 回切微防环：故障路径恢复后，还是会因为收敛时间不一致导致出现的微环，而回切不会进入TI-LFA的过程，因此也无法通过延迟来解决；  
+比如b c d e f，如果cd之间故障，b c之间的路径不受影响且无环，d e f之间的路径也不受影响且无环，因此故障恢复之后，只需要在指定cd之间的邻接sid，就可以保证整条链路无环；  
+c. 远端正切微防环：
 
 policy两种下发策略
 1. 控制器下发  
@@ -131,15 +156,27 @@ policy两种下发策略
 2. 静态配置  
 
 #### 参考资料
-https://www.h3c.com/cn/Service/Document_Software/Document_Center/Home/Routers/00-Public/Learn_Technologies/White_Paper/SRv6_TE_Policy-6930/#_Toc118215814
+https://www.h3c.com/cn/Service/Document_Software/Document_Center/Home/Routers/00-Public/Learn_Technologies/White_Paper/SRv6_TE_Policy-6930/#_Toc118215814  
+
+### 路由协议对SRv6的扩展
+#### BGP for SRv6
+SRv6场景BGP Update消息一个比较明显的变化是增加了与SRv6相关的BGP Prefix-SID属性。扩展了两个BGP Prefix-SID属性TLV，用于携带业务相关的SRv6 SID：  
+1. SRv6 L3 Service TLV：用于携带三层业务的SRv6 SID信息，支持携带End.DX4，End.DT4，End.DX6，End.DT6等SID；  
+2. SRv6 L2 Service TLV：用于携带二层业务的SRv6 SID信息，支持携带End.DX2，End.DX2V，End.DT2U，End.DT2M等SID的信息；  
+BGP Prefix-SID属性是专门为SR定义的BGP路径属性，这个属性是可选和可传递的，类型号为40，其Value字段为实现各种业务功能的一个或多个TLV。每个TLV都是type、length、value的组合；  
+#### ISIS for SRv6
+#### OSPFv3 for SRv6
+OSPFv3 SRv6扩展也有两个功能：发布Locator信息和SID信息。Locator信息用于帮助其他节点定位到发布SID的节点；SID信息用于完整描述SID的功能，比如SID绑定的Function信息；  
+为发布Locator的路由信息，OSPFv3需要发布两个LSA（Link State Advertisement，链路状态通告）:SRv6 Locator LSA和Prefix LSA；  
+SRv6 Locator LSA包含SRv6 Locator TLV,TLV中包括前缀和掩码，以及OSPFv3路由类型。网络中的其他节点可以通过该LSA学习到Locator的路由。SRv6 Locator TLV除了携带用于指导路由的信息外，还会携带不需要关联OSPFv3邻居节点的SRv6 SID，例如End SID；  
+通过Prefix LSA可以发布Locator前缀。这些Prefix LSA是OSPFv3协议已有的LSA，普通IPv6节点（不支持SRv6的节点）也能够通过学习这些LSA，生成Locator路由（指导报文转发到发布Locator的节点的路由），进而支持与SRv6节点共同组网；  
+
+#### 参考资料
+https://support.huawei.com/enterprise/zh/doc/EDOC1100174722/2d89ee77
 
 尾节点保护
 
 微防环
-微环的产生，是当网络中出现故障，各节点路径收敛顺序不一致出现的一种暂时性环路；  
-正切微防环即感知到故障的节点维持TI-LFA计算的备份路径转发一段时间，等待网络上其他节点完成新的路径收敛之后，其自身再更新路径；  
 
-回切微防环，即故障路径恢复后，还是会因为收敛时间不一致导致出现的微环，而回切不会进入TI-LFA的过程，因此也无法通过延迟来解决；  
-比如b c d e f，如果cd之间故障，b c之间的路径不受影响且无环，d e f之间的路径也不受影响且无环，因此故障恢复之后，只需要在指定cd之间的邻接sid，就可以保证整条链路无环；  
 
-远端正切微防环
+
