@@ -4,7 +4,7 @@
 ### iquic握手
 1. TLS握手需要的信息是封装在quic initial packet的crypto frame中发给对端的；  
 2. 最初的encLevel都是initial，通过qtls的回调，会改变为handshake，此时发给对端的packet就变为handshake packet。握手完成之后encLevel会变成applicationData，此时发送的是1RTT packet；  
-3. Retry packet，服务端发客户端受，必须是第一个包，否则被丢弃。retry packet会携带服务端生产的token。客户端后续必须使用该token；  
+3. Retry packet，服务端发客户端收，必须是第一个包，否则被丢弃。retry packet会携带服务端生产的token。客户端后续必须使用该token；  
 4. 握手过程传递的参数：quic version、connection id长度、握手超时时间、空闲超时时间、初始连接接收窗口、最大连接接收窗口、initial scid、retry scid、origin dcid等；  
 5. connection id变化过程：
 a. 客户端连接建立之初随机生产一个4字节的scid（如果已经创建了一个udp conn，这里的scid为空），也随机生成一个8~20字节的dcid。客户端发出的第一个initial packet其scid是空；  

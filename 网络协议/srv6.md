@@ -124,6 +124,12 @@ SRv6 TE Policy NLRI包含的字段如下：
 4. Weight Sub-TLV：通告Segment List的权重；  
 5. Policy Candidate Path Name Sub-TLV：通告候选路径的名称；  
 
+#### 引流策略
+1. color引流  
+2. 静态路由引流  
+3. 策略路由引流  
+4. QoS引流  
+
 #### 保护策略
 1. TI-LFA方案  
 比如路径是A-B-C-D-E，当B和C之间的链路故障，此时B可以选择一条其他的路径比如B-H-C，绕过故障链路进行转发；  
