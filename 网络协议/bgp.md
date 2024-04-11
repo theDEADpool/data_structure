@@ -61,7 +61,27 @@ TCP建联成功，发送Open包；
 5. OpenConfirm  
 收到邻居的Open包，参数协商完成，自己发出Keepalive，等待邻居的Keepalive；  
 6. Established  
-已经收到对方的Keepalive报文，进入该状态。双方协商完成，开始使用Update报文通告路由信息；  
+已经收到对方的Keepalive报文，进入该状态。双方协商完成，开始使用Update报文通告路由信息； 
+
+1. Idle状态是BGP初始状态。在Idle状态下，BGP拒绝邻居发送的连接请求。只有在收到本设备的Start事件后，BGP才开始尝试和其它BGP对等体进行TCP连接，并转至Connect状态。
+2. 在Connect状态下，BGP启动连接重传定时器（Connect Retry），等待TCP完成连接。
+如果TCP连接成功，那么BGP向对等体发送Open报文，并转至OpenSent状态。
+如果TCP连接失败，那么BGP转至Active状态。
+如果连接重传定时器超时，BGP仍没有收到BGP对等体的响应，那么BGP继续尝试和其它BGP对等体进行TCP连接，停留在Connect状态。
+3. 在Active状态下，BGP总是在试图建立TCP连接。
+如果TCP连接成功，那么BGP向对等体发送Open报文，关闭连接重传定时器，并转至OpenSent状态。
+如果TCP连接失败，那么BGP停留在Active状态。
+如果连接重传定时器超时，BGP仍没有收到BGP对等体的响应，那么BGP转至Connect状态。
+4. 在OpenSent状态下，BGP等待对等体的Open报文，并对收到的Open报文中的AS号、版本号、认证码等进行检查。
+如果收到的Open报文正确，那么BGP发送Keepalive报文，并转至OpenConfirm状态。
+如果发现收到的Open报文有错误，那么BGP发送Notification报文给对等体，并转至Idle状态。
+5. 在OpenConfirm状态下，BGP等待Keepalive或Notification报文。如果收到Keepalive报文，则转至Established状态，如果收到Notification报文，则转至Idle状态。
+6. 在Established状态下，BGP可以和对等体交换Update、Keepalive、Route-refresh报文和Notification报文。
+如果收到正确的Update或Keepalive报文，那么BGP就认为对端处于正常运行状态，将保持BGP连接。
+如果收到错误的Update或Keepalive报文，那么BGP发送Notification报文通知对端，并转至Idle状态。
+Route-refresh报文不会改变BGP状态。
+如果收到Notification报文，那么BGP转至Idle状态。
+如果收到TCP拆链通知，那么BGP断开连接，转至Idle状态。
 
 ## 邻居信息
 1. Peer:邻居地址；  
