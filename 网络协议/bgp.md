@@ -99,7 +99,7 @@ Route-refresh报文不会改变BGP状态。
 5. PrefVal
 6. Path/Ogn:Origin表示路由来源方式，incomplete表示路由是import route导入的；
 
-加入路由的方式  
+## 路由引入方式 
 1. Network:逐条添加路由；  
 2. Import route:将直连路由、静态路由、其他路由协议生产的路由导入BGP；  
 
