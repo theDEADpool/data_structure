@@ -69,9 +69,17 @@ Ack range的增加与删除：
 2. 在issueNewConnID与此同时也会生成对应数量的new_connection_id frame。每个connection id会有一个seq num相当于其编号；  
 
 ### 地址校验
+在接收到客户端的初始数据包（Initial packet）后，服务端可以通过发送包含令牌（token）的重试数据包（Retry packet）来请求地址验证。客户端在接收到这个重试数据包（Retry packet）的令牌（token）之后，必须在该连接中后续所有初始数据包（Initial packet）中附上该令牌（token）；  
+服务端在收到带有令牌的初始数据包时（Initial packet），它不能重新发送另外一个重试数据包（Retry packet）。服务端只能选择中止连接，或者允许该包被继续处理；  
+令牌（token）是随机生成的，攻击者不可能为自己的地址生成一个有效的令牌。因此它可以用于向服务端证明客户端接收到了令牌，地址是有效性的；  
+
 1. 服务端在完成地址校验之前发送的数据量不能超过接收数据量的三倍；  
 2. 服务端在加密等级变为EncryptionHandshake时会设置peerAddressValidated = true，此时上面限制会失效；客户端是在加密等级变为EncryptionHandshake或Encryption1RTT时候设置peerAddressValidated = true；  
 3. 为了防止地址校验完成之前发包限制导致死锁，客户端在地址校验完成之前PTO会尝试发送initial pkt或handshake pkt；  
+
+### 路径验证
+通过PATH_CHALLENGE和PATH_RESPONSE帧来进行路径验证，客户端发送一个PATH_CHALLENGE帧，包含一个随机生成的payload。可以在多个不同数据包中携带多个PATH_CHALLENGE帧。必须将包含PATH_CHALLENGE帧的数据报（datagrams）至少扩展到1200字节；  
+服务端收到后将payload中随机生成的内容加入到PATH_RESPONSE帧中，也需要扩展到至少1200字节。客户端收到后确认payload内容正确，则路径验证成功。如果验证时间超过了3倍PTO则验证失败；  
 
 ## 多路径
 设计原则：
